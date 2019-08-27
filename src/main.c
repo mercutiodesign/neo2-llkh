@@ -66,36 +66,51 @@ TCHAR mapScanCodeToChar(unsigned level, char in)
 void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 {
 	SHORT keyScanResult = VkKeyScanEx(key, GetKeyboardLayout(0));
-	keyInfo.vkCode = keyScanResult;
-	char modifiers = keyScanResult >> 8;
-	bool shift = ((modifiers & 1) != 0);
-	bool alt = ((modifiers & 2) != 0);
-	bool ctrl = ((modifiers & 4) != 0);
-	bool altgr = alt && ctrl;
-	if (altgr) {
-		ctrl = false;
-		alt = false;
+
+	if (keyScanResult == -1) {
+		// key not found in the current keyboard layout
+		KEYBDINPUT kb={0};
+		INPUT Input={0};
+
+		// down
+		kb.wScan = key;
+		kb.dwFlags = KEYEVENTF_UNICODE;
+		Input.type = INPUT_KEYBOARD;
+		Input.ki = kb;
+		SendInput(1, &Input, sizeof(Input));
+	} else {
+		keyInfo.vkCode = keyScanResult;
+		char modifiers = keyScanResult >> 8;
+		bool shift = ((modifiers & 1) != 0);
+		bool alt = ((modifiers & 2) != 0);
+		bool ctrl = ((modifiers & 4) != 0);
+		bool altgr = alt && ctrl;
+		if (altgr) {
+			ctrl = false;
+			alt = false;
+		}
+
+		if (altgr)
+			keybd_event(VK_RMENU, 0, 0, 0);
+		if (ctrl)
+			keybd_event(VK_CONTROL, 0, 0, 0);
+		if (alt)
+			keybd_event(VK_MENU, 0, 0, 0);	// ALT
+		if (shift)
+			keybd_event(VK_SHIFT, 0, 0, 0);
+
+		keyInfo.vkCode = keyScanResult;
+		keybd_event(keyInfo.vkCode, keyInfo.scanCode, keyInfo.flags, keyInfo.dwExtraInfo);
+
+		if (altgr)
+			keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
+		if (ctrl)
+			keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
+		if (alt)
+			keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);	// ALT
+		if (shift)
+			keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
 	}
-
-	if (altgr)
-		keybd_event(VK_RMENU, 0, 0, 0);
-	if (ctrl)
-		keybd_event(VK_CONTROL, 0, 0, 0);
-	if (alt)
-		keybd_event(VK_MENU, 0, 0, 0);	// ALT
-	if (shift)
-		keybd_event(VK_SHIFT, 0, 0, 0);
-
-	keybd_event(keyInfo.vkCode, keyInfo.scanCode, keyInfo.flags, keyInfo.dwExtraInfo);
-
-	if (altgr)
-		keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
-	if (ctrl)
-		keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
-	if (alt)
-		keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);	// ALT
-	if (shift)
-		keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
 }
 
 bool handleLayer1SpecialCases(KBDLLHOOKSTRUCT keyInfo)
