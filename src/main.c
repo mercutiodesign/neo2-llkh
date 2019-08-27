@@ -31,26 +31,29 @@ TCHAR mapScanCodeToChar(unsigned level, char in)
 
 	switch (level) {
 	case 1:
-		wcscpy(mappingTable + 2,   L"1234567890-`");
+		wcscpy(mappingTable +  2, L"1234567890-`");
 		wcscpy(mappingTable + 16, L"xvlcwkhgfqß´");
 		wcscpy(mappingTable + 30, L"uiaeosnrtdy");
 		wcscpy(mappingTable + 44, L"üöäpzbm,.j");
 		break;
 	case 2:
-		wcscpy(mappingTable + 2, L"°§ℓ»«$€„“”—");
-		wcscpy(mappingTable + 16, L"XVLCWKHGFQSS");
+		wcscpy(mappingTable + 41, L"̌");  // key to the left of "1" key
+		wcscpy(mappingTable +  2, L"̊§ℓ»«$€„“”—̧");
+		wcscpy(mappingTable + 16, L"XVLCWKHGFQẞ~");
 		wcscpy(mappingTable + 30, L"UIAEOSNRTDY");
 		wcscpy(mappingTable + 44, L"ÜÖÄPZBM–•J");
 		break;
 	case 3:
-		wcscpy(mappingTable + 2, L"¹²³›‹¢¥‚‘’‐");
-		wcscpy(mappingTable + 16, L"…_[]^!<>=&");
+		wcscpy(mappingTable + 41, L"^");
+		wcscpy(mappingTable +  2, L"¹²³›‹¢¥‚‘’—°");
+		wcscpy(mappingTable + 16, L"…_[]^!<>=&ſ");
 		wcscpy(mappingTable + 30, L"\\/{}*?()-:@");
 		wcscpy(mappingTable + 44, L"#$|~`+%\"';");
 		break;
 	case 4:
-		wcscpy(mappingTable + 2, L"ªº№⋮·£¤\0/*-");
-		wcscpy(mappingTable + 21, L"¡789+−");
+		wcscpy(mappingTable + 41, L"̇ ");
+		wcscpy(mappingTable +  2, L"ªº№⋮·£¤\0/*-̈");
+		wcscpy(mappingTable + 21, L"¡789+−̋");
 		wcscpy(mappingTable + 35, L"¿456,.");
 		wcscpy(mappingTable + 49, L":123;");
 		break;
@@ -113,23 +116,22 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 	}
 }
 
-bool handleLayer1SpecialCases(KBDLLHOOKSTRUCT keyInfo)
+bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
 	switch(keyInfo.scanCode) {
-		case 13:
-			sendChar(L'`', keyInfo);
-			keybd_event(VK_SPACE, 0, 0, 0); 
+		case 20:
+			sendChar(L'^', keyInfo);
+			keybd_event(VK_SPACE, 0, 0, 0);
 			return true;
-		case 27:
-			sendChar(L'´', keyInfo);
-			keybd_event(VK_SPACE, 0, 0, 0); 
+		case 48:
+			sendChar(L'`', keyInfo);
+			keybd_event(VK_SPACE, 0, 0, 0);
 			return true;
 		default:
 			return false;
-	}	
+	}
 
 }
-
 
 bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
@@ -254,7 +256,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);	
 			mod4Pressed = true;
 			return -1;
-		} else if (level == 1 && handleLayer1SpecialCases(keyInfo)) {
+		} else if (level == 3 && handleLayer3SpecialCases(keyInfo)) {
 			return -1;
 		} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
 			return -1;
