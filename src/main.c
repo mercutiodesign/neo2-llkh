@@ -123,9 +123,11 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	for (int i = 0; i < len; i++)
 		mappingTable[i] = 0;
 
+	mappingTable[16] = VK_PRIOR;
 	mappingTable[17] = VK_BACK;
 	mappingTable[18] = VK_UP;
 	mappingTable[19] = VK_DELETE;
+	mappingTable[20] = VK_NEXT;
 	mappingTable[30] = VK_HOME;
 	mappingTable[31] = VK_LEFT;
 	mappingTable[32] = VK_DOWN;
@@ -133,6 +135,7 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	mappingTable[34] = VK_END;
 	mappingTable[44] = VK_ESCAPE;
 	mappingTable[45] = VK_TAB;
+	mappingTable[46] = VK_INSERT;
 	mappingTable[47] = VK_RETURN;
 	mappingTable[57] = '0';
 
