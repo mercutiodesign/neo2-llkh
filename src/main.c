@@ -1,6 +1,8 @@
 #define UNICODE
 /**
- * Alternative Windows driver for the Neo2-Keyboard layout (www.neo-layout.org)
+ * Alternative Windows driver for the Neo2 based keyboard layouts:
+ * Neo2, (www.neo-layout.org)
+ * AdNW, AdNWzjßf, KOY (www.adnw.de)
  */
 
 #include <windows.h>
@@ -11,54 +13,144 @@
 #include "resources.h"
 
 HHOOK keyhook = NULL;
-#define APPNAME "neo2-llkh"
+#define APPNAME "neo-llkh"
+#define len 103
 
 /**
  * True if no mapping should be done
  */
 bool bypassMode = false;
 extern void toggleBypassMode();
+char *layout;
+
+TCHAR mappingTableLevel1[len];
+TCHAR mappingTableLevel2[len];
+TCHAR mappingTableLevel3[len];
+TCHAR mappingTableLevel4[len];
+
+// use quote/ä as right level 3 modifier:
+bool quoteAsMod3R = false;
+int scanCodeMod3R = 43;
+
+
+void initLayout()
+{
+	for (int i = 0; i < len; i++) {
+		mappingTableLevel1[i] = 0;
+		mappingTableLevel2[i] = 0;
+		mappingTableLevel3[i] = 0;
+		mappingTableLevel4[i] = 0;
+	}
+
+	// same for all layouts
+	wcscpy(mappingTableLevel1 +  2, L"1234567890-`");
+
+	wcscpy(mappingTableLevel2 + 41, L"̌");  // key to the left of "1" key
+	wcscpy(mappingTableLevel2 +  2, L"°§ℓ»«$€„“”—̧");
+
+	wcscpy(mappingTableLevel3 + 41, L"^");
+	wcscpy(mappingTableLevel3 +  2, L"¹²³›‹¢¥‚‘’—̊");
+	wcscpy(mappingTableLevel3 + 16, L"…_[]^!<>=&ſ̷");
+	wcscpy(mappingTableLevel3 + 30, L"\\/{}*?()-:@");
+	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';");
+
+	wcscpy(mappingTableLevel4 + 41, L"̇");
+	wcscpy(mappingTableLevel4 +  2, L"ªº№⋮·£¤0/*-¨");
+	wcscpy(mappingTableLevel4 + 21, L"¡789+−˝");
+	wcscpy(mappingTableLevel4 + 35, L"¿456,.");
+	wcscpy(mappingTableLevel4 + 49, L":123;");
+
+	if (strcmp(layout, "adnw") == 0) {
+		wcscpy(mappingTableLevel1 + 16, L"küu.ävgcljf´");
+		wcscpy(mappingTableLevel1 + 30, L"hieaodtrnsß");
+		wcscpy(mappingTableLevel1 + 44, L"xyö,qbpwmz");
+
+		wcscpy(mappingTableLevel2 + 16, L"KÜU•ÄVGCLJF~");
+		wcscpy(mappingTableLevel2 + 30, L"HIEAODTRNSẞ");
+		wcscpy(mappingTableLevel2 + 44, L"XYÖ–QBPWMZ");
+
+	} else if (strcmp(layout, "adnwzjf") == 0) {
+		wcscpy(mappingTableLevel1 + 16, L"küu.ävgclßz´");
+		wcscpy(mappingTableLevel1 + 30, L"hieaodtrnsf");
+		wcscpy(mappingTableLevel1 + 44, L"xyö,qbpwmj");
+
+		wcscpy(mappingTableLevel2 + 16, L"KÜU•ÄVGCLẞZ~");
+		wcscpy(mappingTableLevel2 + 30, L"HIEAODTRNSF");
+		wcscpy(mappingTableLevel2 + 44, L"XYÖ–QBPWMJ");
+
+	} else if (strcmp(layout, "koy") == 0) {
+		wcscpy(mappingTableLevel1 + 16, L"k.o,yvgclßz´");
+		wcscpy(mappingTableLevel1 + 30, L"haeiudtrnsf");
+		wcscpy(mappingTableLevel1 + 44, L"xqäüöbpwmj");
+
+		wcscpy(mappingTableLevel2 + 16, L"K•O–YVGCLẞZ~");
+		wcscpy(mappingTableLevel2 + 30, L"HAEIUDTRNSF");
+		wcscpy(mappingTableLevel2 + 44, L"XQÄÜÖBPWMJ");
+
+	} else if (strcmp(layout, "kou") == 0) {
+		wcscpy(mappingTableLevel1 + 16, L"k.ouävgclfz´");
+		wcscpy(mappingTableLevel1 + 30, L"haeiybtrnsß");
+		wcscpy(mappingTableLevel1 + 44, L"qx,üöpdwmj");
+
+		wcscpy(mappingTableLevel2 + 16, L"K!OUÄVGCLFZ~");
+		wcscpy(mappingTableLevel2 + 30, L"HAEIYBTRNSẞ");
+		wcscpy(mappingTableLevel2 + 44, L"QX–ÜÖPDWMJ");
+
+		wcscpy(mappingTableLevel3 + 16, L"→%{}^•<>=&€̷");
+		wcscpy(mappingTableLevel3 + 32, L"[]*?()-:@");
+		wcscpy(mappingTableLevel3 + 50, L"_\"';");
+
+		wcscpy(mappingTableLevel4 +  4, L"✔✘·£¤0/*-¨");
+		wcscpy(mappingTableLevel4 + 21, L":789+−˝");
+		wcscpy(mappingTableLevel4 + 35, L"-456,;");
+		wcscpy(mappingTableLevel4 + 49, L"_123.");
+
+	} else { // neo
+		wcscpy(mappingTableLevel1 + 16, L"xvlcwkhgfqß´");
+		wcscpy(mappingTableLevel1 + 30, L"uiaeosnrtdy");
+		wcscpy(mappingTableLevel1 + 44, L"üöäpzbm,.j");
+
+		wcscpy(mappingTableLevel2 + 16, L"XVLCWKHGFQẞ~");
+		wcscpy(mappingTableLevel2 + 30, L"UIAEOSNRTDY");
+		wcscpy(mappingTableLevel2 + 44, L"ÜÖÄPZBM–•J");
+	}
+
+	// if quote/ä is the right level 3 modifier, copy symbol of quote/ä key to backslash/# key
+	if (quoteAsMod3R) {
+		mappingTableLevel1[43] = mappingTableLevel1[40];
+		mappingTableLevel2[43] = mappingTableLevel2[40];
+		mappingTableLevel3[43] = mappingTableLevel3[40];
+		mappingTableLevel4[43] = mappingTableLevel4[40];
+	}
+}
 
 /**
  * Map a key scancode to the char that should be displayed after typing
  **/
 TCHAR mapScanCodeToChar(unsigned level, char in)
 {
-	unsigned len = 103;
-	TCHAR mappingTable[len];
-	for (int i = 0; i < len; i++)
-		mappingTable[i] = 0;
-
 	switch (level) {
-	case 1:
-		wcscpy(mappingTable +  2, L"1234567890-`");
-		wcscpy(mappingTable + 16, L"xvlcwkhgfqß´");
-		wcscpy(mappingTable + 30, L"uiaeosnrtdy");
-		wcscpy(mappingTable + 44, L"üöäpzbm,.j");
-		break;
-	case 2:
-		wcscpy(mappingTable + 41, L"̌");  // key to the left of "1" key
-		wcscpy(mappingTable +  2, L"̊§ℓ»«$€„“”—̧");
-		wcscpy(mappingTable + 16, L"XVLCWKHGFQẞ~");
-		wcscpy(mappingTable + 30, L"UIAEOSNRTDY");
-		wcscpy(mappingTable + 44, L"ÜÖÄPZBM–•J");
-		break;
-	case 3:
-		wcscpy(mappingTable + 41, L"^");
-		wcscpy(mappingTable +  2, L"¹²³›‹¢¥‚‘’—°");
-		wcscpy(mappingTable + 16, L"…_[]^!<>=&ſ");
-		wcscpy(mappingTable + 30, L"\\/{}*?()-:@");
-		wcscpy(mappingTable + 44, L"#$|~`+%\"';");
-		break;
-	case 4:
-		wcscpy(mappingTable + 41, L"̇ ");
-		wcscpy(mappingTable +  2, L"ªº№⋮·£¤\0/*-̈");
-		wcscpy(mappingTable + 21, L"¡789+−̋");
-		wcscpy(mappingTable + 35, L"¿456,.");
-		wcscpy(mappingTable + 49, L":123;");
-		break;
+		case 2:
+			return mappingTableLevel2[in];
+		case 3:
+			return mappingTableLevel3[in];
+		case 4:
+			return mappingTableLevel4[in];
+		default: // level 1
+			return mappingTableLevel1[in];
 	}
-	return mappingTable[in];
+}
+
+void sendUnicodeChar(TCHAR key)
+{
+	KEYBDINPUT kb={0};
+	INPUT Input={0};
+
+	kb.wScan = key;
+	kb.dwFlags = KEYEVENTF_UNICODE;
+	Input.type = INPUT_KEYBOARD;
+	Input.ki = kb;
+	SendInput(1, &Input, sizeof(Input));
 }
 
 /**
@@ -72,15 +164,7 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 
 	if (keyScanResult == -1) {
 		// key not found in the current keyboard layout
-		KEYBDINPUT kb={0};
-		INPUT Input={0};
-
-		// down
-		kb.wScan = key;
-		kb.dwFlags = KEYEVENTF_UNICODE;
-		Input.type = INPUT_KEYBOARD;
-		Input.ki = kb;
-		SendInput(1, &Input, sizeof(Input));
+		sendUnicodeChar(key);
 	} else {
 		keyInfo.vkCode = keyScanResult;
 		char modifiers = keyScanResult >> 8;
@@ -116,12 +200,32 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 	}
 }
 
+bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo)
+{
+	switch(keyInfo.scanCode) {
+		case 27:
+			sendChar(L'̃', keyInfo);
+			return true;
+		case 41:
+			sendChar(L'̌', keyInfo);
+			return true;
+		default:
+			return false;
+	}
+
+}
+
 bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
 	switch(keyInfo.scanCode) {
+		case 13:
+			sendChar(L'̊', keyInfo);
+			return true;
 		case 20:
 			sendChar(L'^', keyInfo);
-			keybd_event(VK_SPACE, 0, 0, 0);
+			return true;
+		case 27:
+			sendChar(L'̷', keyInfo);
 			return true;
 		case 48:
 			sendChar(L'`', keyInfo);
@@ -135,7 +239,17 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 
 bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
-	unsigned len = 103;
+	switch(keyInfo.scanCode) {
+		case 13:
+			sendChar(L'¨', keyInfo);
+			return true;
+		case 27:
+			sendChar(L'˝', keyInfo);
+			return true;
+		case 41:
+			sendChar(L'̇', keyInfo);
+			return true;
+	}
 	CHAR mappingTable[len];
 	for (int i = 0; i < len; i++)
 		mappingTable[i] = 0;
@@ -150,10 +264,17 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	mappingTable[32] = VK_DOWN;
 	mappingTable[33] = VK_RIGHT;
 	mappingTable[34] = VK_END;
-	mappingTable[44] = VK_ESCAPE;
-	mappingTable[45] = VK_TAB;
-	mappingTable[46] = VK_INSERT;
-	mappingTable[47] = VK_RETURN;
+	if (strcmp(layout, "kou") == 0) {
+		mappingTable[44] = VK_INSERT;
+		mappingTable[45] = VK_TAB;
+		mappingTable[46] = VK_RETURN;
+		mappingTable[48] = VK_ESCAPE;
+	} else {
+		mappingTable[44] = VK_ESCAPE;
+		mappingTable[45] = VK_TAB;
+		mappingTable[46] = VK_INSERT;
+		mappingTable[47] = VK_RETURN;
+	}
 	mappingTable[57] = '0';
 
 	if (mappingTable[keyInfo.scanCode] != 0) {
@@ -171,7 +292,7 @@ bool isShift(KBDLLHOOKSTRUCT keyInfo)
 
 bool isMod3(KBDLLHOOKSTRUCT keyInfo)
 {
-	return keyInfo.vkCode == VK_CAPITAL || keyInfo.scanCode == 43;
+	return keyInfo.vkCode == VK_CAPITAL || keyInfo.scanCode == scanCodeMod3R;
 }
 
 bool isMod4(KBDLLHOOKSTRUCT keyInfo)
@@ -205,7 +326,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			return CallNextHookEx(NULL, code, wparam, lparam);
 		}
 	}
-	
+
 	if (code == HC_ACTION && wparam == WM_KEYDOWN &&
 		shiftPressed && keyInfo.scanCode == 69) {
 		toggleBypassMode();
@@ -253,8 +374,10 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			/* ALTGR triggers two keys: LCONTROL and RMENU
 			   we don't want to have any of those two here effective but return -1 seems 
 			   to change nothing, so we simply send keyup here.  */
-			keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);	
+			keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
 			mod4Pressed = true;
+			return -1;
+		} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
 			return -1;
 		} else if (level == 3 && handleLayer3SpecialCases(keyInfo)) {
 			return -1;
@@ -322,6 +445,21 @@ void toggleBypassMode()
 
 int main(int argc, char *argv[])
 {
+	// the first parameter sets the layout (optional):
+	// neo (default), adnw, adnwzjf, koy, kou
+	if (argc >= 2)
+		layout = argv[1];
+	else
+		layout = "neo";
+
+	// if the second parameter is 1, quote and backslash (ä and #) will be swapped
+	if (argc >= 3 && strcmp(argv[2], "1") == 0) {
+		quoteAsMod3R = true;
+		scanCodeMod3R = 40;
+	}
+
+	initLayout();
+
 	DWORD tid;
 
 	HINSTANCE hInstance = GetModuleHandle(NULL);
