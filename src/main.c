@@ -223,6 +223,7 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 			return true;
 		case 20:
 			sendChar(L'^', keyInfo);
+			keybd_event(VK_SPACE, 0, 0, 0);
 			return true;
 		case 27:
 			sendChar(L'̷', keyInfo);
