@@ -1,1 +1,0 @@
-start neo-llkh.exe koy
