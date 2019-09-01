@@ -28,10 +28,14 @@ Wenn du symmetrische Level3-Modifier verwenden möchtest (also den rechten Modif
 Über das Icon in der Taskleiste kannst du den Treiber wieder beenden.
 
 ## Funktionsumfang
-Es werden nur die Ebenen 1-4 unterstützt. Das Einrasten von Ebene 4 (beide Level4-Modifier gleichzeitig) wird nicht unterstützt. Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktivert werden. Dafür muss der Treiber mit dem Parameter 1 an dritter Stelle gestartet werden:
+Es werden nur die Ebenen 1-4 unterstützt. Das Einrasten von Ebene 4 (beide Level4-Modifier gleichzeitig) wird nicht unterstützt. Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktiviert werden. Dafür muss der Treiber mit dem Parameter 1 an dritter Stelle gestartet werden:
 
 `neo-llkh.exe neo 0 1`
 
 Folgende tote Tasten funktionieren: ``^ ` ´ ̧ ̌ ~ ° ̇  `` (teilweise muss die tote Taste vor, teilweise nach dem Buchstaben gedrückt werden)
 
 Diese Tasten sollten eigentlich tote Tasten sein, geben aber direkt die entsprechenden Symbole aus: `̷  ¨ ˝`
+
+Außerdem gibt es einen Modus, in dem bei Shortcuts immer das QWERTZ-Layout gilt. Das heißt, immer wenn Strg, die linke Alt-Taste oder eine Windows-Taste gedrückt ist, wird unabhängig vom eingestellten Layout QWERTZ verwendet. Somit können Strg-c, Strg-v, Strg-s usw. einfach mit der linken Hand betätigt werden. Um diesen Modus zu aktivieren, muss eine `1` als vierter Parameter übergeben werden:
+
+`neo-llkh.exe adnw 0 0 1`
