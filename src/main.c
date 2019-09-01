@@ -21,23 +21,29 @@ HHOOK keyhook = NULL;
 bool quoteAsMod3R = false;
 int scanCodeMod3R = 43;
 bool shiftLockEnabled = false;
+bool qwertzForShortcuts = false;
 
 /**
  * True if no mapping should be done
  */
 bool bypassMode = false;
 extern void toggleBypassMode();
-char *layout;
+char layout[100];
 
 bool shiftLeftPressed = false;
 bool shiftRightPressed = false;
 bool shiftLockActive = false;
 
+bool ctrlLeftPressed = false;
+bool ctrlRightPressed = false;
+bool altLeftPressed = false;
+bool winLeftPressed = false;
+bool winRightPressed = false;
+
 TCHAR mappingTableLevel1[len];
 TCHAR mappingTableLevel2[len];
 TCHAR mappingTableLevel3[len];
 TCHAR mappingTableLevel4[len];
-
 
 
 void initLayout()
@@ -68,20 +74,20 @@ void initLayout()
 	wcscpy(mappingTableLevel4 + 49, L":123;");
 
 	if (strcmp(layout, "adnw") == 0) {
-		wcscpy(mappingTableLevel1 + 16, L"küu.ävgcljf´");
+		wcscpy(mappingTableLevel1 + 16, L"kuü.ävgcljf´");
 		wcscpy(mappingTableLevel1 + 30, L"hieaodtrnsß");
 		wcscpy(mappingTableLevel1 + 44, L"xyö,qbpwmz");
 
-		wcscpy(mappingTableLevel2 + 16, L"KÜU•ÄVGCLJF~");
+		wcscpy(mappingTableLevel2 + 16, L"KUÜ•ÄVGCLJF~");
 		wcscpy(mappingTableLevel2 + 30, L"HIEAODTRNSẞ");
 		wcscpy(mappingTableLevel2 + 44, L"XYÖ–QBPWMZ");
 
 	} else if (strcmp(layout, "adnwzjf") == 0) {
-		wcscpy(mappingTableLevel1 + 16, L"küu.ävgclßz´");
+		wcscpy(mappingTableLevel1 + 16, L"kuü.ävgclßz´");
 		wcscpy(mappingTableLevel1 + 30, L"hieaodtrnsf");
 		wcscpy(mappingTableLevel1 + 44, L"xyö,qbpwmj");
 
-		wcscpy(mappingTableLevel2 + 16, L"KÜU•ÄVGCLẞZ~");
+		wcscpy(mappingTableLevel2 + 16, L"KUÜ•ÄVGCLẞZ~");
 		wcscpy(mappingTableLevel2 + 30, L"HIEAODTRNSF");
 		wcscpy(mappingTableLevel2 + 44, L"XYÖ–QBPWMJ");
 
@@ -316,6 +322,11 @@ bool isMod4(KBDLLHOOKSTRUCT keyInfo)
          || keyInfo.vkCode == VK_OEM_102; // |<> -Key
 }
 
+bool isSystemKeyPressed() {
+	return ctrlLeftPressed || ctrlRightPressed
+		|| altLeftPressed || winLeftPressed || winRightPressed;
+}
+
 void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 {
 	char *keyName;
@@ -423,11 +434,34 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			mod4Pressed = false;
 			return -1;
 		}
+		if (keyInfo.vkCode == VK_LCONTROL) {
+			ctrlLeftPressed = false;
+		} else if (keyInfo.vkCode == VK_RCONTROL) {
+			ctrlRightPressed = false;
+		} else if (keyInfo.vkCode == VK_LMENU) {
+			altLeftPressed = false;
+		} else if (keyInfo.vkCode == VK_LWIN) {
+			winLeftPressed = false;
+		} else if (keyInfo.vkCode == VK_RWIN) {
+			winRightPressed = false;
+		}
 	}
 
 	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
 		printf("\n");
 		logKeyEvent("key down", keyInfo);
+
+		if (keyInfo.vkCode == VK_LCONTROL) {
+			ctrlLeftPressed = true;
+		} else if (keyInfo.vkCode == VK_RCONTROL) {
+			ctrlRightPressed = true;
+		} else if (keyInfo.vkCode == VK_LMENU) {
+			altLeftPressed = true;
+		} else if (keyInfo.vkCode == VK_LWIN) {
+			winLeftPressed = true;
+		} else if (keyInfo.vkCode == VK_RWIN) {
+			winRightPressed = true;
+		}
 
 		unsigned level = 1;
 		if (shiftPressed != shiftLockActive)
@@ -465,7 +499,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			return -1;
 		} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
 			return -1;
-		} else {
+		} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
 			TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
 			if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
 				// if key must be mapped
@@ -525,26 +559,83 @@ void toggleBypassMode()
 	printf("%i bypass mode \n", bypassMode);
 }
 
+bool fileExists(LPCSTR szPath)
+{
+	DWORD dwAttrib = GetFileAttributesA(szPath);
+
+	return (dwAttrib != INVALID_FILE_ATTRIBUTES
+	        && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
 int main(int argc, char *argv[])
 {
-	// the first parameter sets the layout (optional):
-	// neo (default), adnw, adnwzjf, koy, kou
-	if (argc >= 2)
-		layout = argv[1];
-	else
-		layout = "neo";
+	// find settings.ini (in same folder as neo-llkh.exe)
+	// get path of neo-llkh.exe
+	char ini[256];
+	GetModuleFileNameA(NULL, ini, 256);
+	//printf("exe: %s\n", ini);
+	char * pch;
+	// find last \ in path
+	pch = strrchr(ini, '\\');
+	// replace neo-llkh.exe by settings.ini
+	strcpy(pch+1, "settings.ini");
+	//printf("ini: %s\n", ini);
 
-	// if the second parameter is 1, quote and backslash (ä and #) will be swapped
-	if (argc >= 3 && strcmp(argv[2], "1") == 0) {
-		quoteAsMod3R = true;
+	if (fileExists(ini)) {
+		char returnValue[100];
+
+		GetPrivateProfileStringA("Settings", "layout", "neo", layout, 100, ini);
+
+		GetPrivateProfileStringA("Settings", "symmetricalLevel3Modifiers", "0", returnValue, 100, ini);
+		quoteAsMod3R = (strcmp(returnValue, "1") == 0);
+
+		GetPrivateProfileStringA("Settings", "shiftLockEnabled", "0", returnValue, 100, ini);
+		shiftLockEnabled = (strcmp(returnValue, "1") == 0);
+
+		GetPrivateProfileStringA("Settings", "qwertzForShortcuts", "0", returnValue, 100, ini);
+		qwertzForShortcuts = (strcmp(returnValue, "1") == 0);
+
+		printf("Einstellungen aus %s:\n", ini);
+		printf("Layout: %s\n", layout);
+		printf("quoteAsMod3R: %d\n", quoteAsMod3R);
+		printf("shiftLockEnabled: %d\n", shiftLockEnabled);
+		printf("qwertzForShortcuts: %d\n\n", qwertzForShortcuts);
+		printf("returnValue: %s\n\n", returnValue);
+
+		if (argc >= 2)
+			printf("Kommandozeilenparameter werden ignoriert, da eine settings.ini gefunden wurde!\n\n");
+
+	} else {
+		printf("Keine Einstellungen gefunden: %s\n", ini);
+
+		// the first parameter sets the layout (optional):
+		// neo (default), adnw, adnwzjf, koy, kou
+		if (argc >= 2)
+			//layout = argv[1];
+			strcpy(layout, argv[1]);
+		else
+			//layout = "neo";
+			strcpy(layout, "neo");
+
+		// if the second parameter is 1, quote and backslash (ä and #) will be swapped
+		if (argc >= 3 && strcmp(argv[2], "1") == 0) {
+			quoteAsMod3R = true;
+		}
+
+		// If the third parameter is 1, shift lock is enabled.
+		// Toggle by pressing both shift keys at the same time.
+		if (argc >= 4 && strcmp(argv[3], "1") == 0) {
+			shiftLockEnabled = true;
+		}
+
+		// If the fourth parameter is 1, "qwertz for shortcuts" is enabled.
+		if (argc >= 5 && strcmp(argv[4], "1") == 0) {
+			qwertzForShortcuts = true;
+		}
+	}
+
+	if (quoteAsMod3R)
 		scanCodeMod3R = 40;
-	}
-
-	// If the third parameter is 1, shift lock is enabled.
-	// Toggle by pressing both shift keys at the same time.
-	if (argc >= 4 && strcmp(argv[3], "1") == 0) {
-		shiftLockEnabled = true;
-	}
 
 	initLayout();
 
