@@ -28,7 +28,9 @@ Wenn du symmetrische Level3-Modifier verwenden möchtest (also den rechten Modif
 Über das Icon in der Taskleiste kannst du den Treiber wieder beenden.
 
 ## Funktionsumfang
-Es werden nur die Ebenen 1-4 unterstützt. Das Einrasten von Ebene 2 oder 4 (beide Shift-Tasten bzw. beide Level4-Modifier gleichzeitig) wird nicht unterstützt.
+Es werden nur die Ebenen 1-4 unterstützt. Das Einrasten von Ebene 4 (beide Level4-Modifier gleichzeitig) wird nicht unterstützt. Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktivert werden. Dafür muss der Treiber mit dem Parameter 1 an dritter Stelle gestartet werden:
+
+`neo-llkh.exe neo 0 1`
 
 Folgende tote Tasten funktionieren: ``^ ` ´ ̧ ̌ ~ ° ̇  `` (teilweise muss die tote Taste vor, teilweise nach dem Buchstaben gedrückt werden)
 
