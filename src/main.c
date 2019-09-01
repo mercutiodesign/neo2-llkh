@@ -16,6 +16,12 @@ HHOOK keyhook = NULL;
 #define APPNAME "neo-llkh"
 #define len 103
 
+
+// use quote/ä as right level 3 modifier:
+bool quoteAsMod3R = false;
+int scanCodeMod3R = 43;
+bool shiftLockEnabled = false;
+
 /**
  * True if no mapping should be done
  */
@@ -25,16 +31,13 @@ char *layout;
 
 bool shiftLeftPressed = false;
 bool shiftRightPressed = false;
-bool shiftLock = false;
+bool shiftLockActive = false;
 
 TCHAR mappingTableLevel1[len];
 TCHAR mappingTableLevel2[len];
 TCHAR mappingTableLevel3[len];
 TCHAR mappingTableLevel4[len];
 
-// use quote/ä as right level 3 modifier:
-bool quoteAsMod3R = false;
-int scanCodeMod3R = 43;
 
 
 void initLayout()
@@ -166,10 +169,10 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 {
 	SHORT keyScanResult = VkKeyScanEx(key, GetKeyboardLayout(0));
 
-	if (keyScanResult == -1 || shiftLock) {
+	if (keyScanResult == -1 || shiftLockActive) {
 		// key not found in the current keyboard layout or shift lock is active
 		//
-		// If shiftLock is true, a unicode letter will be sent. This implies
+		// If shiftLockActive is true, a unicode letter will be sent. This implies
 		// that shortcuts don't work in shift lock mode. That's good, because
 		// people might not be aware that they would send Ctrl-S instead of
 		// Ctrl-s. Sending a unicode letter makes it possible to undo shift
@@ -359,7 +362,7 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 		default:
 			keyName = "";
 	}
-	char *shiftLockInfo = shiftLock ? " [shift lock active]" : "";
+	char *shiftLockInfo = shiftLockActive ? " [shift lock active]" : "";
 	printf("%-10s sc %u vk 0x%x 0x%x %d %s%s\n", desc, keyInfo.scanCode, keyInfo.vkCode,
 	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockInfo);
 }
@@ -399,16 +402,16 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			shiftPressed = false;  // correct?
 			if (keyInfo.vkCode == VK_RSHIFT) {
 				shiftRightPressed = false;
-				if (shiftLeftPressed) {
-					shiftLock = !shiftLock;
-					printf("Shift lock %s!\n", shiftLock ? "activated" : "deactivated");
+				if (shiftLockEnabled && shiftLeftPressed) {
+					shiftLockActive = !shiftLockActive;
+					printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
 				}
 				keybd_event(VK_RSHIFT, 0, KEYEVENTF_KEYUP, 0);
 			} else {
 				shiftLeftPressed = false;
-				if (shiftRightPressed) {
-					shiftLock = !shiftLock;
-					printf("Shift lock %s!\n", shiftLock ? "activated" : "deactivated");
+				if (shiftLockEnabled && shiftRightPressed) {
+					shiftLockActive = !shiftLockActive;
+					printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
 				}
 				keybd_event(VK_LSHIFT, 0, KEYEVENTF_KEYUP, 0);
 			}
@@ -427,8 +430,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		logKeyEvent("key down", keyInfo);
 
 		unsigned level = 1;
-		if (shiftPressed != shiftLock)
-			// (shiftPressed and no shiftLock) or (shiftLock and no shiftPressed) (XOR)
+		if (shiftPressed != shiftLockActive)
+			// (shiftPressed and no shiftLockActive) or (shiftLockActive and no shiftPressed) (XOR)
 			level = 2;
 		if (mod3Pressed)
 			level = 3;
@@ -535,6 +538,12 @@ int main(int argc, char *argv[])
 	if (argc >= 3 && strcmp(argv[2], "1") == 0) {
 		quoteAsMod3R = true;
 		scanCodeMod3R = 40;
+	}
+
+	// If the third parameter is 1, shift lock is enabled.
+	// Toggle by pressing both shift keys at the same time.
+	if (argc >= 4 && strcmp(argv[3], "1") == 0) {
+		shiftLockEnabled = true;
 	}
 
 	initLayout();
