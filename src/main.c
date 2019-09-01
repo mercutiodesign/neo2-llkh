@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <wchar.h>
 #include <stdbool.h>
+#include <signal.h>
 #include "trayicon.h"
 #include "resources.h"
 
@@ -22,6 +23,7 @@ bool quoteAsMod3R = false;
 int scanCodeMod3R = 43;
 bool shiftLockEnabled = false;
 bool qwertzForShortcuts = false;
+bool swapLeftCtrlAndLeftAlt = false;
 
 /**
  * True if no mapping should be done
@@ -45,6 +47,20 @@ TCHAR mappingTableLevel2[len];
 TCHAR mappingTableLevel3[len];
 TCHAR mappingTableLevel4[len];
 
+
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
+{
+	switch (fdwCtrlType) {
+		// Handle the Ctrl-c signal.
+		case CTRL_C_EVENT:
+			printf("\nCtrl-c detected!\n");
+			printf("Please quit using the tray icon!\n\n");
+			return TRUE;
+
+		default:
+			return FALSE;
+	}
+}
 
 void initLayout()
 {
@@ -450,11 +466,25 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		}
 
 		if (keyInfo.vkCode == VK_LCONTROL) {
-			ctrlLeftPressed = false;
+			if (swapLeftCtrlAndLeftAlt) {
+				altLeftPressed = false;
+				keybd_event(VK_LMENU, 0, KEYEVENTF_KEYUP, 0);
+			} else {
+				ctrlLeftPressed = false;
+				keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
+			}
+			return -1;
 		} else if (keyInfo.vkCode == VK_RCONTROL) {
 			ctrlRightPressed = false;
 		} else if (keyInfo.vkCode == VK_LMENU) {
-			altLeftPressed = false;
+			if (swapLeftCtrlAndLeftAlt) {
+				ctrlLeftPressed = false;
+				keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
+			} else {
+				altLeftPressed = false;
+				keybd_event(VK_LMENU, 0, KEYEVENTF_KEYUP, 0);
+			}
+			return -1;
 		} else if (keyInfo.vkCode == VK_LWIN) {
 			winLeftPressed = false;
 		} else if (keyInfo.vkCode == VK_RWIN) {
@@ -466,11 +496,25 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		logKeyEvent("\nkey down", keyInfo);
 
 		if (keyInfo.vkCode == VK_LCONTROL) {
-			ctrlLeftPressed = true;
+			if (swapLeftCtrlAndLeftAlt) {
+				altLeftPressed = true;
+				keybd_event(VK_LMENU, 0, 0, 0);
+			} else {
+				ctrlLeftPressed = true;
+				keybd_event(VK_LCONTROL, 0, 0, 0);
+			}
+			return -1;
 		} else if (keyInfo.vkCode == VK_RCONTROL) {
 			ctrlRightPressed = true;
 		} else if (keyInfo.vkCode == VK_LMENU) {
-			altLeftPressed = true;
+			if (swapLeftCtrlAndLeftAlt) {
+				ctrlLeftPressed = true;
+				keybd_event(VK_LCONTROL, 0, 0, 0);
+			} else {
+				altLeftPressed = true;
+				keybd_event(VK_LMENU, 0, 0, 0);
+			}
+			return -1;
 		} else if (keyInfo.vkCode == VK_LWIN) {
 			winLeftPressed = true;
 		} else if (keyInfo.vkCode == VK_RWIN) {
@@ -609,11 +653,15 @@ int main(int argc, char *argv[])
 		GetPrivateProfileStringA("Settings", "qwertzForShortcuts", "0", returnValue, 100, ini);
 		qwertzForShortcuts = (strcmp(returnValue, "1") == 0);
 
+		GetPrivateProfileStringA("Settings", "swapLeftCtrlAndLeftAlt", "0", returnValue, 100, ini);
+		swapLeftCtrlAndLeftAlt = (strcmp(returnValue, "1") == 0);
+
 		printf("Einstellungen aus %s:\n", ini);
 		printf("Layout: %s\n", layout);
 		printf("quoteAsMod3R: %d\n", quoteAsMod3R);
 		printf("shiftLockEnabled: %d\n", shiftLockEnabled);
-		printf("qwertzForShortcuts: %d\n\n", qwertzForShortcuts);
+		printf("qwertzForShortcuts: %d\n", qwertzForShortcuts);
+		printf("swapLeftCtrlAndLeftAlt: %d\n\n", swapLeftCtrlAndLeftAlt);
 
 		if (argc >= 2)
 			printf("Kommandozeilenparameter werden ignoriert, da eine settings.ini gefunden wurde!\n\n");
@@ -649,6 +697,11 @@ int main(int argc, char *argv[])
 
 	if (quoteAsMod3R)
 		scanCodeMod3R = 40;
+
+	if (swapLeftCtrlAndLeftAlt)
+		// catch ctrl-c because it will send keydown for ctrl
+		// but then keyup for alt. Then ctrl would be locked.
+		SetConsoleCtrlHandler(CtrlHandler, TRUE);
 
 	initLayout();
 
