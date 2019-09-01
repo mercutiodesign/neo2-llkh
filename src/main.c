@@ -23,6 +23,10 @@ bool bypassMode = false;
 extern void toggleBypassMode();
 char *layout;
 
+bool shiftLeftPressed = false;
+bool shiftRightPressed = false;
+bool shiftLock = false;
+
 TCHAR mappingTableLevel1[len];
 TCHAR mappingTableLevel2[len];
 TCHAR mappingTableLevel3[len];
@@ -162,8 +166,15 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 {
 	SHORT keyScanResult = VkKeyScanEx(key, GetKeyboardLayout(0));
 
-	if (keyScanResult == -1) {
-		// key not found in the current keyboard layout
+	if (keyScanResult == -1 || shiftLock) {
+		// key not found in the current keyboard layout or shift lock is active
+		//
+		// If shiftLock is true, a unicode letter will be sent. This implies
+		// that shortcuts don't work in shift lock mode. That's good, because
+		// people might not be aware that they would send Ctrl-S instead of
+		// Ctrl-s. Sending a unicode letter makes it possible to undo shift
+		// lock temporarily by holding one shift key because that way the
+		// shift key won't be sent.
 		sendUnicodeChar(key);
 	} else {
 		keyInfo.vkCode = keyScanResult;
@@ -182,7 +193,7 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 		if (ctrl)
 			keybd_event(VK_CONTROL, 0, 0, 0);
 		if (alt)
-			keybd_event(VK_MENU, 0, 0, 0);	// ALT
+			keybd_event(VK_MENU, 0, 0, 0); // ALT
 		if (shift)
 			keybd_event(VK_SHIFT, 0, 0, 0);
 
@@ -194,7 +205,7 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 		if (ctrl)
 			keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
 		if (alt)
-			keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);	// ALT
+			keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0); // ALT
 		if (shift)
 			keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
 	}
@@ -299,8 +310,7 @@ bool isMod3(KBDLLHOOKSTRUCT keyInfo)
 bool isMod4(KBDLLHOOKSTRUCT keyInfo)
 {
 	return keyInfo.vkCode == VK_RMENU 
-         || keyInfo.vkCode == VK_OEM_102 // |<> -Key
-				;
+         || keyInfo.vkCode == VK_OEM_102; // |<> -Key
 }
 
 void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
@@ -349,8 +359,9 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 		default:
 			keyName = "";
 	}
-	printf("%-10s sc %u vk 0x%x 0x%x %d %s\n", desc, keyInfo.scanCode, keyInfo.vkCode,
-	       keyInfo.flags, keyInfo.dwExtraInfo, keyName);
+	char *shiftLockInfo = shiftLock ? " [shift lock active]" : "";
+	printf("%-10s sc %u vk 0x%x 0x%x %d %s%s\n", desc, keyInfo.scanCode, keyInfo.vkCode,
+	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockInfo);
 }
 
 __declspec(dllexport)
@@ -385,8 +396,22 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		logKeyEvent("key up", keyInfo);
 
 		if (isShift(keyInfo)) {
-			shiftPressed = false;
-			keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
+			shiftPressed = false;  // correct?
+			if (keyInfo.vkCode == VK_RSHIFT) {
+				shiftRightPressed = false;
+				if (shiftLeftPressed) {
+					shiftLock = !shiftLock;
+					printf("Shift lock %s!\n", shiftLock ? "activated" : "deactivated");
+				}
+				keybd_event(VK_RSHIFT, 0, KEYEVENTF_KEYUP, 0);
+			} else {
+				shiftLeftPressed = false;
+				if (shiftRightPressed) {
+					shiftLock = !shiftLock;
+					printf("Shift lock %s!\n", shiftLock ? "activated" : "deactivated");
+				}
+				keybd_event(VK_LSHIFT, 0, KEYEVENTF_KEYUP, 0);
+			}
 			return -1;
 		} else if (isMod3(keyInfo)) {
 			mod3Pressed = false;
@@ -402,7 +427,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		logKeyEvent("key down", keyInfo);
 
 		unsigned level = 1;
-		if (shiftPressed)
+		if (shiftPressed != shiftLock)
+			// (shiftPressed and no shiftLock) or (shiftLock and no shiftPressed) (XOR)
 			level = 2;
 		if (mod3Pressed)
 			level = 3;
@@ -411,7 +437,14 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 
 		if (isShift(keyInfo)) {
 			shiftPressed = true;
-			keybd_event(VK_SHIFT, 0, 0, 0);
+			if (keyInfo.vkCode == VK_RSHIFT) {
+				shiftRightPressed = true;
+				keybd_event(VK_RSHIFT, 0, 0, 0);
+			} else {
+				shiftLeftPressed = true;
+				keybd_event(VK_LSHIFT, 0, 0, 0);
+			}
+			//keybd_event(VK_SHIFT, 0, 0, 0);
 			return -1;
 		} else if (isMod3(keyInfo)) {
 			mod3Pressed = true;
