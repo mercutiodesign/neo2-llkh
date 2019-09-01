@@ -21,6 +21,7 @@ HHOOK keyhook = NULL;
 bool quoteAsMod3R = false;
 int scanCodeMod3R = 43;
 bool shiftLockEnabled = false;
+bool qwertzForShortcuts = false;
 
 /**
  * True if no mapping should be done
@@ -32,6 +33,12 @@ char *layout;
 bool shiftLeftPressed = false;
 bool shiftRightPressed = false;
 bool shiftLockActive = false;
+
+bool ctrlLeftPressed = false;
+bool ctrlRightPressed = false;
+bool altLeftPressed = false;
+bool winLeftPressed = false;
+bool winRightPressed = false;
 
 TCHAR mappingTableLevel1[len];
 TCHAR mappingTableLevel2[len];
@@ -316,6 +323,11 @@ bool isMod4(KBDLLHOOKSTRUCT keyInfo)
          || keyInfo.vkCode == VK_OEM_102; // |<> -Key
 }
 
+bool isSystemKeyPressed() {
+	return ctrlLeftPressed || ctrlRightPressed
+		|| altLeftPressed || winLeftPressed || winRightPressed;
+}
+
 void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 {
 	char *keyName;
@@ -423,11 +435,34 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			mod4Pressed = false;
 			return -1;
 		}
+		if (keyInfo.vkCode == VK_LCONTROL) {
+			ctrlLeftPressed = false;
+		} else if (keyInfo.vkCode == VK_RCONTROL) {
+			ctrlRightPressed = false;
+		} else if (keyInfo.vkCode == VK_LMENU) {
+			altLeftPressed = false;
+		} else if (keyInfo.vkCode == VK_LWIN) {
+			winLeftPressed = false;
+		} else if (keyInfo.vkCode == VK_RWIN) {
+			winRightPressed = false;
+		}
 	}
 
 	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
 		printf("\n");
 		logKeyEvent("key down", keyInfo);
+
+		if (keyInfo.vkCode == VK_LCONTROL) {
+			ctrlLeftPressed = true;
+		} else if (keyInfo.vkCode == VK_RCONTROL) {
+			ctrlRightPressed = true;
+		} else if (keyInfo.vkCode == VK_LMENU) {
+			altLeftPressed = true;
+		} else if (keyInfo.vkCode == VK_LWIN) {
+			winLeftPressed = true;
+		} else if (keyInfo.vkCode == VK_RWIN) {
+			winRightPressed = true;
+		}
 
 		unsigned level = 1;
 		if (shiftPressed != shiftLockActive)
@@ -465,7 +500,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			return -1;
 		} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
 			return -1;
-		} else {
+		} else if (!isSystemKeyPressed()) {
 			TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
 			if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
 				// if key must be mapped
@@ -544,6 +579,11 @@ int main(int argc, char *argv[])
 	// Toggle by pressing both shift keys at the same time.
 	if (argc >= 4 && strcmp(argv[3], "1") == 0) {
 		shiftLockEnabled = true;
+	}
+
+	// If the fourth parameter is 1, "qwertz for shortcuts" is enabled.
+	if (argc >= 5 && strcmp(argv[4], "1") == 0) {
+		qwertzForShortcuts = true;
 	}
 
 	initLayout();
