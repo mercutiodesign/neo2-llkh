@@ -305,8 +305,52 @@ bool isMod4(KBDLLHOOKSTRUCT keyInfo)
 
 void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 {
-	printf("%-10s sc %u vk 0x%x 0x%x %d\n", desc, keyInfo.scanCode, keyInfo.vkCode,
-	       keyInfo.flags, keyInfo.dwExtraInfo);
+	char *keyName;
+	switch (keyInfo.vkCode) {
+		case VK_LSHIFT:
+			keyName = "(Shift left)";
+			break;
+		case VK_RSHIFT:
+			keyName = "(Shift right)";
+			break;
+		case VK_CAPITAL:
+			keyName = "(M3 left)";
+			break;
+		case 0xde:  // ä
+			keyName = quoteAsMod3R ? "(M3 right)" : "";
+			break;
+		case 0xbf:  // #
+			keyName = quoteAsMod3R ? "" : "(M3 right)";
+			break;
+		case VK_CONTROL:
+			keyName = "(Ctrl)";
+			break;
+		case VK_LCONTROL:
+			keyName = "(Ctrl left)";
+			break;
+		case VK_RCONTROL:
+			keyName = "(Ctrl right)";
+			break;
+		case VK_MENU:
+			keyName = "(Alt)";
+			break;
+		case VK_LMENU:
+			keyName = "(Alt left)";
+			break;
+		case VK_RMENU:
+			keyName = "(Alt Right)";
+			break;
+		case VK_LWIN:
+			keyName = "(Win left)";
+			break;
+		case VK_RWIN:
+			keyName = "(Win right)";
+			break;
+		default:
+			keyName = "";
+	}
+	printf("%-10s sc %u vk 0x%x 0x%x %d %s\n", desc, keyInfo.scanCode, keyInfo.vkCode,
+	       keyInfo.flags, keyInfo.dwExtraInfo, keyName);
 }
 
 __declspec(dllexport)
@@ -354,6 +398,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	}
 
 	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
+		printf("\n");
 		logKeyEvent("key down", keyInfo);
 
 		unsigned level = 1;
@@ -460,6 +505,8 @@ int main(int argc, char *argv[])
 	}
 
 	initLayout();
+
+	setbuf(stdout, NULL);
 
 	DWORD tid;
 

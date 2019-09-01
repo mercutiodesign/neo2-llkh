@@ -19,7 +19,7 @@ Starte einfach die selbst kompilierte `neo-llkh.exe` aus dem `src`-Ordner. Mögl
 
 `neo-llkh.exe adnw`
 
-Folgende Layout-Parameter werden erkannt: `adnw`, `adnwzjf` (=AdNWzjßf), `koy`, `kou`.
+Folgende Layout-Parameter werden erkannt: `adnw`, `adnwzjf` (=AdNWzjßf), `koy`, `kou`. Alternativ kannst du auch eine der bat-Dateien im `bin`-Ordner per Doppelklick starten.
 
 Wenn du symmetrische Level3-Modifier verwenden möchtest (also den rechten Modifier auf der ä- statt auf der #-Taste), füge eine 1 als zweiten Parameter hinzu. Beispiel:
 
