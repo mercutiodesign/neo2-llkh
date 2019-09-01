@@ -299,7 +299,20 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	mappingTable[57] = '0';
 
 	if (mappingTable[keyInfo.scanCode] != 0) {
-		keybd_event(mappingTable[keyInfo.scanCode], 0, 0, 0);
+		// If arrow key, page up/down, home or end,
+		// send flag 0x01 (bit 0 = extended).
+		// This in necessary for selecting text with shift + arrow.
+		if (mappingTable[keyInfo.scanCode]==VK_LEFT
+			|| mappingTable[keyInfo.scanCode]==VK_RIGHT
+			|| mappingTable[keyInfo.scanCode]==VK_UP
+			|| mappingTable[keyInfo.scanCode]==VK_DOWN
+			|| mappingTable[keyInfo.scanCode]==VK_PRIOR
+			|| mappingTable[keyInfo.scanCode]==VK_NEXT
+			|| mappingTable[keyInfo.scanCode]==VK_HOME
+			|| mappingTable[keyInfo.scanCode]==VK_END)
+			keybd_event(mappingTable[keyInfo.scanCode], 0, 0x01, 0);
+		else
+			keybd_event(mappingTable[keyInfo.scanCode], 0, 0, 0);
 		return true;
 	}
 	return false;
@@ -399,6 +412,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 
 	if (code == HC_ACTION && wparam == WM_KEYDOWN &&
 		shiftPressed && keyInfo.scanCode == 69) {
+		// Shift + Pause
 		toggleBypassMode();
 		return -1;
 	}
@@ -434,6 +448,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			mod4Pressed = false;
 			return -1;
 		}
+
 		if (keyInfo.vkCode == VK_LCONTROL) {
 			ctrlLeftPressed = false;
 		} else if (keyInfo.vkCode == VK_RCONTROL) {
@@ -448,8 +463,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	}
 
 	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
-		printf("\n");
-		logKeyEvent("key down", keyInfo);
+		logKeyEvent("\nkey down", keyInfo);
 
 		if (keyInfo.vkCode == VK_LCONTROL) {
 			ctrlLeftPressed = true;
@@ -600,7 +614,6 @@ int main(int argc, char *argv[])
 		printf("quoteAsMod3R: %d\n", quoteAsMod3R);
 		printf("shiftLockEnabled: %d\n", shiftLockEnabled);
 		printf("qwertzForShortcuts: %d\n\n", qwertzForShortcuts);
-		printf("returnValue: %s\n\n", returnValue);
 
 		if (argc >= 2)
 			printf("Kommandozeilenparameter werden ignoriert, da eine settings.ini gefunden wurde!\n\n");
