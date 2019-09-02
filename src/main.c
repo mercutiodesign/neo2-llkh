@@ -9,29 +9,33 @@
 #include <stdio.h>
 #include <wchar.h>
 #include <stdbool.h>
-#include <signal.h>
 #include "trayicon.h"
 #include "resources.h"
 
 HHOOK keyhook = NULL;
 #define APPNAME "neo-llkh"
-#define len 103
+#define LEN 103
 
-
-// use quote/ä as right level 3 modifier:
-bool quoteAsMod3R = false;
-int scanCodeMod3R = 43;
-bool shiftLockEnabled = false;
-bool qwertzForShortcuts = false;
-bool swapLeftCtrlAndLeftAlt = false;
+/**
+ * Some global settings.
+ * These values can be set in a configuration file (settings.ini)
+ */
+char layout[100];                    // keyboard layout (default: neo)
+bool quoteAsMod3R = false;           // use quote/ä as right level 3 modifier
+int scanCodeMod3R = 43;              // this scan code depends on quoteAsMod3R
+bool shiftLockEnabled = false;       // enable (allow) shift locks
+bool qwertzForShortcuts = false;     // use QWERTZ when Ctrl, Alt or Win is involved
+bool swapLeftCtrlAndLeftAlt = false; // swap left Ctrl and left Alt key
 
 /**
  * True if no mapping should be done
  */
 bool bypassMode = false;
 extern void toggleBypassMode();
-char layout[100];
 
+/**
+ * States of some keys and shift lock.
+ */
 bool shiftLeftPressed = false;
 bool shiftRightPressed = false;
 bool shiftLockActive = false;
@@ -42,10 +46,14 @@ bool altLeftPressed = false;
 bool winLeftPressed = false;
 bool winRightPressed = false;
 
-TCHAR mappingTableLevel1[len];
-TCHAR mappingTableLevel2[len];
-TCHAR mappingTableLevel3[len];
-TCHAR mappingTableLevel4[len];
+/**
+ * Mapping tables for four levels.
+ * They will be defined in initLayout().
+ */
+TCHAR mappingTableLevel1[LEN];
+TCHAR mappingTableLevel2[LEN];
+TCHAR mappingTableLevel3[LEN];
+TCHAR mappingTableLevel4[LEN];
 
 
 BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
@@ -64,7 +72,8 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 
 void initLayout()
 {
-	for (int i = 0; i < len; i++) {
+	// initialize the mapping tables
+	for (int i = 0; i < LEN; i++) {
 		mappingTableLevel1[i] = 0;
 		mappingTableLevel2[i] = 0;
 		mappingTableLevel3[i] = 0;
@@ -74,7 +83,7 @@ void initLayout()
 	// same for all layouts
 	wcscpy(mappingTableLevel1 +  2, L"1234567890-`");
 
-	wcscpy(mappingTableLevel2 + 41, L"̌");  // key to the left of "1" key
+	wcscpy(mappingTableLevel2 + 41, L"̌");  // key to the left of the "1" key
 	wcscpy(mappingTableLevel2 +  2, L"°§ℓ»«$€„“”—̧");
 
 	wcscpy(mappingTableLevel3 + 41, L"^");
@@ -89,6 +98,7 @@ void initLayout()
 	wcscpy(mappingTableLevel4 + 35, L"¿456,.");
 	wcscpy(mappingTableLevel4 + 49, L":123;");
 
+	// layout dependent
 	if (strcmp(layout, "adnw") == 0) {
 		wcscpy(mappingTableLevel1 + 16, L"kuü.ävgcljf´");
 		wcscpy(mappingTableLevel1 + 30, L"hieaodtrnsß");
@@ -240,10 +250,10 @@ bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
 	switch(keyInfo.scanCode) {
 		case 27:
-			sendChar(L'̃', keyInfo);
+			sendChar(L'̃', keyInfo);  // perispomene (Tilde)
 			return true;
 		case 41:
-			sendChar(L'̌', keyInfo);
+			sendChar(L'̌', keyInfo);  // caron, wedge, háček (Hatschek)
 			return true;
 		default:
 			return false;
@@ -255,14 +265,14 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
 	switch(keyInfo.scanCode) {
 		case 13:
-			sendChar(L'̊', keyInfo);
+			sendChar(L'̊', keyInfo);  // overring
 			return true;
 		case 20:
 			sendChar(L'^', keyInfo);
 			keybd_event(VK_SPACE, 0, 0, 0);
 			return true;
 		case 27:
-			sendChar(L'̷', keyInfo);
+			sendChar(L'̷', keyInfo);  // bar (diakritischer Schrägstrich)
 			return true;
 		case 48:
 			sendChar(L'`', keyInfo);
@@ -278,17 +288,20 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
 	switch(keyInfo.scanCode) {
 		case 13:
-			sendChar(L'¨', keyInfo);
+			sendChar(L'¨', keyInfo);  // diaeresis, umlaut
 			return true;
 		case 27:
-			sendChar(L'˝', keyInfo);
+			sendChar(L'˝', keyInfo);  // double acute (doppelter Akut)
 			return true;
 		case 41:
-			sendChar(L'̇', keyInfo);
+			sendChar(L'̇', keyInfo);  // dot above (Punkt, darüber)
 			return true;
 	}
-	CHAR mappingTable[len];
-	for (int i = 0; i < len; i++)
+
+	// A second level 4 mapping table for special (non-unicode) keys.
+	// Maybe this could be included in the global TCHAR mapping table or level 4!?
+	CHAR mappingTable[LEN];
+	for (int i = 0; i < LEN; i++)
 		mappingTable[i] = 0;
 
 	mappingTable[16] = VK_PRIOR;
@@ -336,24 +349,27 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 
 bool isShift(KBDLLHOOKSTRUCT keyInfo)
 {
-	return keyInfo.vkCode == VK_SHIFT || keyInfo.vkCode == VK_LSHIFT
+	return keyInfo.vkCode == VK_SHIFT
+	    || keyInfo.vkCode == VK_LSHIFT
 	    || keyInfo.vkCode == VK_RSHIFT;
 }
 
 bool isMod3(KBDLLHOOKSTRUCT keyInfo)
 {
-	return keyInfo.vkCode == VK_CAPITAL || keyInfo.scanCode == scanCodeMod3R;
+	return keyInfo.vkCode == VK_CAPITAL
+	    || keyInfo.scanCode == scanCodeMod3R;
 }
 
 bool isMod4(KBDLLHOOKSTRUCT keyInfo)
 {
 	return keyInfo.vkCode == VK_RMENU 
-         || keyInfo.vkCode == VK_OEM_102; // |<> -Key
+	    || keyInfo.vkCode == VK_OEM_102; // |<> key
 }
 
 bool isSystemKeyPressed() {
 	return ctrlLeftPressed || ctrlRightPressed
-		|| altLeftPressed || winLeftPressed || winRightPressed;
+	    || altLeftPressed
+	    || winLeftPressed || winRightPressed;
 }
 
 void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
@@ -391,7 +407,7 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 			keyName = "(Alt left)";
 			break;
 		case VK_RMENU:
-			keyName = "(Alt Right)";
+			keyName = "(Alt right)";
 			break;
 		case VK_LWIN:
 			keyName = "(Win left)";
@@ -417,10 +433,11 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	KBDLLHOOKSTRUCT keyInfo;
 	if (code == HC_ACTION
 	    && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP || wparam == WM_SYSKEYDOWN
-		|| wparam == WM_KEYDOWN)) {
+	        || wparam == WM_KEYDOWN)) {
 		keyInfo = *((KBDLLHOOKSTRUCT *) lparam);
 
-		if (keyInfo.flags & LLKHF_INJECTED) {	// process injected events like normal, because most probably we are injecting them
+		if (keyInfo.flags & LLKHF_INJECTED) {
+			// process injected events like normal, because most probably we are injecting them
 			logKeyEvent("injected", keyInfo);
 			return CallNextHookEx(NULL, code, wparam, lparam);
 		}
@@ -496,6 +513,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
 		logKeyEvent("\nkey down", keyInfo);
 
+		// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
 		if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
 			if (swapLeftCtrlAndLeftAlt) {
 				altLeftPressed = true;
@@ -540,7 +558,6 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 				shiftLeftPressed = true;
 				keybd_event(VK_LSHIFT, 0, 0, 0);
 			}
-			//keybd_event(VK_SHIFT, 0, 0, 0);
 			return -1;
 		} else if (isMod3(keyInfo)) {
 			mod3Pressed = true;
@@ -628,7 +645,9 @@ bool fileExists(LPCSTR szPath)
 
 int main(int argc, char *argv[])
 {
-	// find settings.ini (in same folder as neo-llkh.exe)
+	/**
+	* find settings.ini (in same folder as neo-llkh.exe)
+	*/
 	// get path of neo-llkh.exe
 	char ini[256];
 	GetModuleFileNameA(NULL, ini, 256);
@@ -640,6 +659,10 @@ int main(int argc, char *argv[])
 	strcpy(pch+1, "settings.ini");
 	//printf("ini: %s\n", ini);
 
+	/**
+	* If settings.ini exists, read in settings.
+	* Otherwise check for command line parameters.
+	*/
 	if (fileExists(ini)) {
 		char returnValue[100];
 
@@ -697,6 +720,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (quoteAsMod3R)
+		// ä/quote key instead of #/backslash key for the right level 3 modifier
 		scanCodeMod3R = 40;
 
 	if (swapLeftCtrlAndLeftAlt)
