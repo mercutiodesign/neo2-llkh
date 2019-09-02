@@ -465,7 +465,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			return -1;
 		}
 
-		if (keyInfo.vkCode == VK_LCONTROL) {
+		// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
+		if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
 			if (swapLeftCtrlAndLeftAlt) {
 				altLeftPressed = false;
 				keybd_event(VK_LMENU, 0, KEYEVENTF_KEYUP, 0);
@@ -495,7 +496,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
 		logKeyEvent("\nkey down", keyInfo);
 
-		if (keyInfo.vkCode == VK_LCONTROL) {
+		if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
 			if (swapLeftCtrlAndLeftAlt) {
 				altLeftPressed = true;
 				keybd_event(VK_LMENU, 0, 0, 0);
