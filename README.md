@@ -16,7 +16,7 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 * Alle 6 Ebenen (die Ebenen 5 und 6 sind nicht komplett und es funktionieren nicht alle Zeichen)
 * Die meisten toten Tasten werden unterstützt: ``^ ` ´ ̧ ̌ ~ ° ̇  `` (teilweise muss die tote Taste vor, teilweise nach dem Buchstaben gedrückt werden)
 * "CapsLock": Ebene 2 kann eingerastet werden (beide Shift-Tasten gleichzeitig)
-* Der rechte Ebene3-Modifier kann auf die ä-Taste gelegt werden.
+* Der rechte Ebene3-Modifier kann auf die ä-Taste gelegt werden
 * Wenn gewünscht, gilt für Shortcuts (mit Strg, Alt und/oder Win) das QWERTZ-Layout
 * Die linke Strg- und Alt-Taste können getauscht werden
 
@@ -31,7 +31,7 @@ Um diesen Treiber aus den Quellen zu installieren, klone dieses Projekt (`git cl
 ## Verwendung
 Starte einfach die selbst kompilierte `neo-llkh.exe` aus dem `src`-Ordner. Möglicherweise funktioniert auch die mitgelieferte `neo-llkh.exe` aus dem `bin`-Ordner (kompiliert unter Windows 10). Standardmäßig wird das Neo2-Layout geladen.
 
-Über das Icon in der Taskleiste (![appicon](src/appicon.ico)) kannst du den Treiber wieder beenden.
+Über das Icon (![appicon](src/appicon.ico)) in der Taskleiste kannst du den Treiber wieder beenden.
 
 ## Einstellungen
 
@@ -50,7 +50,7 @@ Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, m
 `shiftLockEnabled=1`
 
 ### Symmetrische Level3-Modifier
-Wenn du den rechten Modifier auf die ä- statt auf die #-Taste legen willst, setze den Wert von `symmetricalLevel3Modifiers` auf `1`:
+Wenn du den rechten Modifier auf die `Ä`- statt auf die `#`-Taste legen willst, setze den Wert von `symmetricalLevel3Modifiers` auf `1`:
 
 `symmetricalLevel3Modifiers=1`
 
@@ -62,9 +62,9 @@ Außerdem gibt es einen Modus, in dem bei Shortcuts immer das QWERTZ-Layout gilt
 ### Linke Alt- und Strg-Taste vertauschen
 Für Mac-Freunde, die es gewohnt sind, Shortcuts mit dem linken Daumen auszuführen.
 
-`swapLeftCtrlAndLeftAlt=0`
+`swapLeftCtrlAndLeftAlt=1`
 
 ### Ebenen 5 und 6
 Achtung: Experimentell! Die Ebenen 5 und 6 sind für die Zahlentasten noch nicht umgesetzt. Auch im Buchstabenfeld funktionieren nicht alle Tasten (obwohl ihnen Symbole zugewiesen wurden).
 
-`supportLevels5and6=0`
+`supportLevels5and6=1`
