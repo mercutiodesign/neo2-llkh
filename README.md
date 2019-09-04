@@ -11,31 +11,60 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 * [KOY](http://adnw.de/index.php?n=Main.SeitlicheNachbaranschl%c3%a4ge)
 * KOU (mein persönliches Layout auf Basis von KOY)
 
+
+## Funktionsumfang
+* Alle 6 Ebenen (die Ebenen 5 und 6 sind nicht komplett und es funktionieren nicht alle Zeichen)
+* Die meisten toten Tasten werden unterstützt: ``^ ` ´ ̧ ̌ ~ ° ̇  `` (teilweise muss die tote Taste vor, teilweise nach dem Buchstaben gedrückt werden)
+* "CapsLock": Ebene 2 kann eingerastet werden (beide Shift-Tasten gleichzeitig)
+* Der rechte Ebene3-Modifier kann auf die ä-Taste gelegt werden.
+* Wenn gewünscht, gilt für Shortcuts (mit Strg, Alt und/oder Win) das QWERTZ-Layout
+* Die linke Strg- und Alt-Taste können getauscht werden
+
+### Was nicht funktioniert
+
+* Das Einrasten von Ebene 4 (beide Level4-Modifier gleichzeitig).
+* Diese Tasten sollten eigentlich tote Tasten sein, geben aber direkt die entsprechenden Symbole aus: `̷  ¨ ˝`
+
 ## Selbst kompilieren
 Um diesen Treiber aus den Quellen zu installieren, klone dieses Projekt (`git clone https://github.com/MaxGyver83/neo2-llkh.git`) oder lade es als zip herunter und entpacke es. Führe dann `make` im `src`-Ordner aus. Dafür müssen make und gcc installiert sein. Wenn du diese Programme noch nicht hast, könntest du z.B. [MinGW](https://sourceforge.net/projects/mingw/) installieren.
 
 ## Verwendung
-Starte einfach die selbst kompilierte `neo-llkh.exe` aus dem `src`-Ordner. Möglicherweise funktioniert auch die mitgelieferte `neo-llkh.exe` aus dem `bin`-Ordner (kompiliert unter Windows 10). Standardmäßig wird das Neo2-Layout geladen. Wenn du ein anderers Layout verwenden möchtest, ändere den layout-Eintrag in der `settings.ini` (aus dem gleichen Ordner wie die verwendete `neo-llkh.exe`), zum Beispiel:
+Starte einfach die selbst kompilierte `neo-llkh.exe` aus dem `src`-Ordner. Möglicherweise funktioniert auch die mitgelieferte `neo-llkh.exe` aus dem `bin`-Ordner (kompiliert unter Windows 10). Standardmäßig wird das Neo2-Layout geladen.
+
+Über das Icon in der Taskleiste (![appicon](src/appicon.ico)) kannst du den Treiber wieder beenden.
+
+## Einstellungen
+
+Alle Einstellungen werden in der mitgelieferten `settings.ini` gemacht. Es wird immer die ini-Datei aus dem gleichen Ordner wie die `neo-llkh.exe` verwendet. Um eine Funktion zu aktivieren, setze den entsprechenden Wert auf `1`. `0` bedeutet deaktiviert.
+
+### Layout
+Wenn du ein anderers Layout verwenden möchtest, ändere den `layout`-Eintrag in der `settings.ini`, zum Beispiel:
 
 `layout=adnw`
 
 Folgende Layout-Parameter werden erkannt: `neo`, `adnw`, `adnwzjf` (=AdNWzjßf), `koy`, `kou`.
 
-Wenn du symmetrische Level3-Modifier verwenden möchtest (also den rechten Modifier auf der ä- statt auf der #-Taste), setze den Wert von `symmetricalLevel3Modifiers` auf `1`:
-
-`symmetricalLevel3Modifiers=1`
-
-Über das Icon in der Taskleiste kannst du den Treiber wieder beenden.
-
-## Funktionsumfang
-Es werden nur die Ebenen 1-4 unterstützt. Das Einrasten von Ebene 4 (beide Level4-Modifier gleichzeitig) wird nicht unterstützt. Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktiviert werden. Dafür muss der Wert von `shiftLockEnabled` in der `settings.ini` auf `1` gesetzt werden:
+### Einrasten von Ebene 2
+Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktiviert werden. Dafür muss der Wert von `shiftLockEnabled` in der `settings.ini` auf `1` gesetzt werden:
 
 `shiftLockEnabled=1`
 
-Folgende tote Tasten funktionieren: ``^ ` ´ ̧ ̌ ~ ° ̇  `` (teilweise muss die tote Taste vor, teilweise nach dem Buchstaben gedrückt werden)
+### Symmetrische Level3-Modifier
+Wenn du den rechten Modifier auf die ä- statt auf die #-Taste legen willst, setze den Wert von `symmetricalLevel3Modifiers` auf `1`:
 
-Diese Tasten sollten eigentlich tote Tasten sein, geben aber direkt die entsprechenden Symbole aus: `̷  ¨ ˝`
+`symmetricalLevel3Modifiers=1`
 
+### QWERTZ-Layout für Shortcuts
 Außerdem gibt es einen Modus, in dem bei Shortcuts immer das QWERTZ-Layout gilt. Das heißt, immer wenn Strg, die linke Alt-Taste oder eine Windows-Taste gedrückt ist, wird unabhängig vom eingestellten Layout QWERTZ verwendet. Somit können Strg-c, Strg-v, Strg-s usw. einfach mit der linken Hand betätigt werden. Um diesen Modus zu aktivieren, muss `qwertzForShortcuts` in der `settings.ini` auf `1` gesetzt werden:
 
 `qwertzForShortcuts=1`
+
+### Linke Alt- und Strg-Taste vertauschen
+Für Mac-Freunde, die es gewohnt sind, Shortcuts mit dem linken Daumen auszuführen.
+
+`swapLeftCtrlAndLeftAlt=0`
+
+### Ebenen 5 und 6
+Achtung: Experimentell! Die Ebenen 5 und 6 sind für die Zahlentasten noch nicht umgesetzt. Auch im Buchstabenfeld funktionieren nicht alle Tasten (obwohl ihnen Symbole zugewiesen wurden).
+
+`supportLevels5and6=0`
