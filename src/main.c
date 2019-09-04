@@ -26,6 +26,7 @@ int scanCodeMod3R = 43;              // this scan code depends on quoteAsMod3R
 bool shiftLockEnabled = false;       // enable (allow) shift locks
 bool qwertzForShortcuts = false;     // use QWERTZ when Ctrl, Alt or Win is involved
 bool swapLeftCtrlAndLeftAlt = false; // swap left Ctrl and left Alt key
+bool supportLevels5and6 = false;     // support levels five and six (greek letters and mathematical symbols)
 
 /**
  * True if no mapping should be done
@@ -39,6 +40,12 @@ extern void toggleBypassMode();
 bool shiftLeftPressed = false;
 bool shiftRightPressed = false;
 bool shiftLockActive = false;
+
+bool level3modLeftPressed = false;
+bool level3modRightPressed = false;
+
+bool level4modLeftPressed = false;
+bool level4modRightPressed = false;
 
 bool ctrlLeftPressed = false;
 bool ctrlRightPressed = false;
@@ -54,6 +61,8 @@ TCHAR mappingTableLevel1[LEN];
 TCHAR mappingTableLevel2[LEN];
 TCHAR mappingTableLevel3[LEN];
 TCHAR mappingTableLevel4[LEN];
+TCHAR mappingTableLevel5[LEN];
+TCHAR mappingTableLevel6[LEN];
 
 
 BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
@@ -70,6 +79,20 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 	}
 }
 
+void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars)
+{
+	TCHAR * l1_lowercase = L"abcdefghijklmnopqrstuvwxyzäöüß.,";
+
+	TCHAR *ptr;
+	for (int i = 0; i < LEN; i++) {
+		ptr = wcschr(l1_lowercase, mappingTableLevel1[i]);
+		if (ptr != NULL && ptr < &l1_lowercase[32]) {
+			//printf("i = %d: mappingTableLevel1[i] = %c; ptr = %d; ptr = %s; index = %d\n", i, mappingTableLevel1[i], ptr, ptr, ptr-l1_lowercase+1);
+			mappingTableOutput[i] = newChars[ptr-l1_lowercase];
+		}
+	}
+}
+
 void initLayout()
 {
 	// initialize the mapping tables
@@ -78,6 +101,10 @@ void initLayout()
 		mappingTableLevel2[i] = 0;
 		mappingTableLevel3[i] = 0;
 		mappingTableLevel4[i] = 0;
+		if (supportLevels5and6) {
+			mappingTableLevel5[i] = 0;
+			mappingTableLevel6[i] = 0;
+		}
 	}
 
 	// same for all layouts
@@ -104,36 +131,20 @@ void initLayout()
 		wcscpy(mappingTableLevel1 + 30, L"hieaodtrnsß");
 		wcscpy(mappingTableLevel1 + 44, L"xyö,qbpwmz");
 
-		wcscpy(mappingTableLevel2 + 16, L"KUÜ•ÄVGCLJF~");
-		wcscpy(mappingTableLevel2 + 30, L"HIEAODTRNSẞ");
-		wcscpy(mappingTableLevel2 + 44, L"XYÖ–QBPWMZ");
-
 	} else if (strcmp(layout, "adnwzjf") == 0) {
 		wcscpy(mappingTableLevel1 + 16, L"kuü.ävgclßz´");
 		wcscpy(mappingTableLevel1 + 30, L"hieaodtrnsf");
 		wcscpy(mappingTableLevel1 + 44, L"xyö,qbpwmj");
-
-		wcscpy(mappingTableLevel2 + 16, L"KUÜ•ÄVGCLẞZ~");
-		wcscpy(mappingTableLevel2 + 30, L"HIEAODTRNSF");
-		wcscpy(mappingTableLevel2 + 44, L"XYÖ–QBPWMJ");
 
 	} else if (strcmp(layout, "koy") == 0) {
 		wcscpy(mappingTableLevel1 + 16, L"k.o,yvgclßz´");
 		wcscpy(mappingTableLevel1 + 30, L"haeiudtrnsf");
 		wcscpy(mappingTableLevel1 + 44, L"xqäüöbpwmj");
 
-		wcscpy(mappingTableLevel2 + 16, L"K•O–YVGCLẞZ~");
-		wcscpy(mappingTableLevel2 + 30, L"HAEIUDTRNSF");
-		wcscpy(mappingTableLevel2 + 44, L"XQÄÜÖBPWMJ");
-
 	} else if (strcmp(layout, "kou") == 0) {
 		wcscpy(mappingTableLevel1 + 16, L"k.ouävgclfz´");
 		wcscpy(mappingTableLevel1 + 30, L"haeiybtrnsß");
 		wcscpy(mappingTableLevel1 + 44, L"qx,üöpdwmj");
-
-		wcscpy(mappingTableLevel2 + 16, L"K!OUÄVGCLFZ~");
-		wcscpy(mappingTableLevel2 + 30, L"HAEIYBTRNSẞ");
-		wcscpy(mappingTableLevel2 + 44, L"QX–ÜÖPDWMJ");
 
 		wcscpy(mappingTableLevel3 + 16, L"→%{}^•<>=&€̷");
 		wcscpy(mappingTableLevel3 + 32, L"[]*?()-:@");
@@ -148,10 +159,26 @@ void initLayout()
 		wcscpy(mappingTableLevel1 + 16, L"xvlcwkhgfqß´");
 		wcscpy(mappingTableLevel1 + 30, L"uiaeosnrtdy");
 		wcscpy(mappingTableLevel1 + 44, L"üöäpzbm,.j");
+	}
 
-		wcscpy(mappingTableLevel2 + 16, L"XVLCWKHGFQẞ~");
-		wcscpy(mappingTableLevel2 + 30, L"UIAEOSNRTDY");
-		wcscpy(mappingTableLevel2 + 44, L"ÜÖÄPZBM–•J");
+	// same for all layouts
+	wcscpy(mappingTableLevel1 + 27, L"´");
+	wcscpy(mappingTableLevel2 + 27, L"~");
+
+	// map letters of level 2
+	TCHAR * charsLevel2;
+	if (strcmp(layout, "kou") == 0)
+		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ!–";
+	else
+		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ•–";
+	mapLevels_2_5_6(mappingTableLevel2, charsLevel2);
+
+	if (supportLevels5and6) {
+		// map levels 5 and 6
+		TCHAR * charsLevel5 = L"αβχδεφγψιθκλμνοπϕρστuvωξυζηϵüςϑϱ";  // a-zäöüß.,
+		mapLevels_2_5_6(mappingTableLevel5, charsLevel5);
+		TCHAR * charsLevel6 = L"∀⇐ℂΔ∃ΦΓΨ∫Θ⨯Λ⇔ℕ∈ΠℚℝΣ∂⊂√ΩΞ∇ℤℵ∩∪∘↦⇒";  // a-zäöüß.,
+		mapLevels_2_5_6(mappingTableLevel6, charsLevel6);
 	}
 
 	// if quote/ä is the right level 3 modifier, copy symbol of quote/ä key to backslash/# key
@@ -160,6 +187,10 @@ void initLayout()
 		mappingTableLevel2[43] = mappingTableLevel2[40];
 		mappingTableLevel3[43] = mappingTableLevel3[40];
 		mappingTableLevel4[43] = mappingTableLevel4[40];
+		if (supportLevels5and6) {
+			mappingTableLevel5[43] = mappingTableLevel5[40];
+			mappingTableLevel6[43] = mappingTableLevel6[40];
+		}
 	}
 }
 
@@ -175,6 +206,10 @@ TCHAR mapScanCodeToChar(unsigned level, char in)
 			return mappingTableLevel3[in];
 		case 4:
 			return mappingTableLevel4[in];
+		case 5:
+			return mappingTableLevel5[in];
+		case 6:
+			return mappingTableLevel6[in];
 		default: // level 1
 			return mappingTableLevel1[in];
 	}
@@ -362,7 +397,7 @@ bool isMod3(KBDLLHOOKSTRUCT keyInfo)
 
 bool isMod4(KBDLLHOOKSTRUCT keyInfo)
 {
-	return keyInfo.vkCode == VK_RMENU 
+	return keyInfo.vkCode == VK_RMENU
 	    || keyInfo.vkCode == VK_OEM_102; // |<> key
 }
 
@@ -475,10 +510,18 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			}
 			return -1;
 		} else if (isMod3(keyInfo)) {
-			mod3Pressed = false;
+			if (keyInfo.scanCode == scanCodeMod3R)
+				level3modRightPressed = false;
+			else  // VK_CAPITAL (CapsLock)
+				level3modLeftPressed = false;
+			mod3Pressed = level3modLeftPressed | level3modRightPressed;
 			return -1;
 		} else if (isMod4(keyInfo)) {
-			mod4Pressed = false;
+			if (keyInfo.vkCode == VK_OEM_102)
+				level4modLeftPressed = false;
+			else  // VK_RMENU (AltGr)
+				level4modRightPressed = false;
+			mod4Pressed = level4modLeftPressed | level4modRightPressed;
 			return -1;
 		}
 
@@ -545,9 +588,15 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			// (shiftPressed and no shiftLockActive) or (shiftLockActive and no shiftPressed) (XOR)
 			level = 2;
 		if (mod3Pressed)
-			level = 3;
+			if (supportLevels5and6 && level == 2)
+				level = 5;
+			else
+				level = 3;
 		if (mod4Pressed)
-			level = 4;
+			if (supportLevels5and6 && level == 3)
+				level = 6;
+			else
+				level = 4;
 
 		if (isShift(keyInfo)) {
 			shiftPressed = true;
@@ -560,14 +609,23 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			}
 			return -1;
 		} else if (isMod3(keyInfo)) {
-			mod3Pressed = true;
+			if (keyInfo.scanCode == scanCodeMod3R)
+				level3modRightPressed = true;
+			else  // VK_CAPITAL (CapsLock)
+				level3modLeftPressed = true;
+			mod3Pressed = level3modLeftPressed | level3modRightPressed;
 			return -1;
 		} else if (isMod4(keyInfo)) {
-			/* ALTGR triggers two keys: LCONTROL and RMENU
-			   we don't want to have any of those two here effective but return -1 seems 
-			   to change nothing, so we simply send keyup here.  */
-			keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
-			mod4Pressed = true;
+			if (keyInfo.vkCode == VK_OEM_102) {
+				level4modLeftPressed = true;
+			} else { // VK_RMENU (AltGr)
+				level4modRightPressed = true;
+				/* ALTGR triggers two keys: LCONTROL and RMENU
+				   we don't want to have any of those two here effective but return -1 seems
+				   to change nothing, so we simply send keyup here.  */
+				keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
+			}
+			mod4Pressed = level4modLeftPressed | level4modRightPressed;
 			return -1;
 		} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
 			return -1;
@@ -680,12 +738,16 @@ int main(int argc, char *argv[])
 		GetPrivateProfileStringA("Settings", "swapLeftCtrlAndLeftAlt", "0", returnValue, 100, ini);
 		swapLeftCtrlAndLeftAlt = (strcmp(returnValue, "1") == 0);
 
+		GetPrivateProfileStringA("Settings", "supportLevels5and6", "0", returnValue, 100, ini);
+		supportLevels5and6 = (strcmp(returnValue, "1") == 0);
+
 		printf("Einstellungen aus %s:\n", ini);
 		printf("Layout: %s\n", layout);
 		printf("quoteAsMod3R: %d\n", quoteAsMod3R);
 		printf("shiftLockEnabled: %d\n", shiftLockEnabled);
 		printf("qwertzForShortcuts: %d\n", qwertzForShortcuts);
-		printf("swapLeftCtrlAndLeftAlt: %d\n\n", swapLeftCtrlAndLeftAlt);
+		printf("swapLeftCtrlAndLeftAlt: %d\n", swapLeftCtrlAndLeftAlt);
+		printf("supportLevels5and6: %d\n\n", supportLevels5and6);
 
 		if (argc >= 2)
 			printf("Kommandozeilenparameter werden ignoriert, da eine settings.ini gefunden wurde!\n\n");
