@@ -174,11 +174,21 @@ void initLayout()
 	mapLevels_2_5_6(mappingTableLevel2, charsLevel2);
 
 	if (supportLevels5and6) {
-		// map levels 5 and 6
+		// map main block on levels 5 and 6
 		TCHAR * charsLevel5 = L"αβχδεφγψιθκλμνοπϕρστuvωξυζηϵüςϑϱ";  // a-zäöüß.,
 		mapLevels_2_5_6(mappingTableLevel5, charsLevel5);
 		TCHAR * charsLevel6 = L"∀⇐ℂΔ∃ΦΓΨ∫Θ⨯Λ⇔ℕ∈ΠℚℝΣ∂⊂√ΩΞ∇ℤℵ∩∪∘↦⇒";  // a-zäöüß.,
 		mapLevels_2_5_6(mappingTableLevel6, charsLevel6);
+
+		// add number row and dead key in upper letter row
+		wcscpy(mappingTableLevel5 + 41, L"̉");
+		wcscpy(mappingTableLevel5 +  2, L"₁₂₃♂♀⚥ϰ⟨⟩₀?῾");
+		wcscpy(mappingTableLevel5 + 27, L"᾿");
+		mappingTableLevel5[57] = 0x00a0;  // space = no-break space
+		wcscpy(mappingTableLevel6 + 41, L"̣");
+		wcscpy(mappingTableLevel6 +  2, L"¬∨∧⊥∡∥→∞∝⌀?̄");
+		wcscpy(mappingTableLevel6 + 27, L"˘");
+		mappingTableLevel6[57] = 0x202f;  // space = narrow no-break space
 	}
 
 	// if quote/ä is the right level 3 modifier, copy symbol of quote/ä key to backslash/# key
