@@ -23,7 +23,8 @@ HHOOK keyhook = NULL;
 char layout[100];                    // keyboard layout (default: neo)
 bool quoteAsMod3R = false;           // use quote/ä as right level 3 modifier
 int scanCodeMod3R = 43;              // this scan code depends on quoteAsMod3R
-bool shiftLockEnabled = false;       // enable (allow) shift locks
+bool capsLockEnabled = false;        // enable (allow) caps lock
+bool shiftLockEnabled = false;       // enable (allow) shift lock (disabled if capsLockEnabled is true)
 bool qwertzForShortcuts = false;     // use QWERTZ when Ctrl, Alt or Win is involved
 bool swapLeftCtrlAndLeftAlt = false; // swap left Ctrl and left Alt key
 bool supportLevels5and6 = false;     // support levels five and six (greek letters and mathematical symbols)
@@ -40,6 +41,7 @@ extern void toggleBypassMode();
 bool shiftLeftPressed = false;
 bool shiftRightPressed = false;
 bool shiftLockActive = false;
+bool capsLockActive = false;
 
 bool level3modLeftPressed = false;
 bool level3modRightPressed = false;
@@ -248,7 +250,7 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 {
 	SHORT keyScanResult = VkKeyScanEx(key, GetKeyboardLayout(0));
 
-	if (keyScanResult == -1 || shiftLockActive
+	if (keyScanResult == -1 || shiftLockActive || capsLockActive
 		|| keyInfo.vkCode >= 0x30 || keyInfo.vkCode <= 0x39) {
 		// key not found in the current keyboard layout or shift lock is active
 		//
@@ -423,10 +425,21 @@ bool isMod4(KBDLLHOOKSTRUCT keyInfo)
 	    || keyInfo.vkCode == VK_OEM_102; // |<> key
 }
 
-bool isSystemKeyPressed() {
+bool isSystemKeyPressed()
+{
 	return ctrlLeftPressed || ctrlRightPressed
 	    || altLeftPressed
 	    || winLeftPressed || winRightPressed;
+}
+
+bool isLetter(TCHAR key)
+{
+	return (key >= 65 && key <= 90  // A-Z
+	        || key >= 97 && key <= 122  // a-z
+	        || key == L'ä' || key == L'ö'
+	        || key == L'ü' || key == L'ß'
+	        || key == L'Ä' || key == L'Ö'
+	        || key == L'Ü' || key == L'ẞ');
 }
 
 void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
@@ -475,9 +488,10 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 		default:
 			keyName = "";
 	}
-	char *shiftLockInfo = shiftLockActive ? " [shift lock active]" : "";
+	char *shiftLockCapsLockInfo = shiftLockActive ? " [shift lock active]"
+	                              : (capsLockActive ? " [caps lock active]" : "");
 	printf("%-10s sc %u vk 0x%x 0x%x %d %s%s\n", desc, keyInfo.scanCode, keyInfo.vkCode,
-	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockInfo);
+	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockCapsLockInfo);
 }
 
 __declspec(dllexport)
@@ -517,16 +531,26 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			shiftPressed = false;  // correct?
 			if (keyInfo.vkCode == VK_RSHIFT) {
 				shiftRightPressed = false;
-				if (shiftLockEnabled && shiftLeftPressed) {
-					shiftLockActive = !shiftLockActive;
-					printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
+				if (shiftLeftPressed) {
+					if (shiftLockEnabled) {
+						shiftLockActive = !shiftLockActive;
+						printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
+					} else if (capsLockEnabled) {
+						capsLockActive = !capsLockActive;
+						printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
+					}
 				}
 				keybd_event(VK_RSHIFT, 0, KEYEVENTF_KEYUP, 0);
 			} else {
 				shiftLeftPressed = false;
-				if (shiftLockEnabled && shiftRightPressed) {
-					shiftLockActive = !shiftLockActive;
-					printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
+				if (shiftRightPressed) {
+					if (shiftLockEnabled) {
+						shiftLockActive = !shiftLockActive;
+						printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
+					} else if (capsLockEnabled) {
+						capsLockActive = !capsLockActive;
+						printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
+					}
 				}
 				keybd_event(VK_LSHIFT, 0, KEYEVENTF_KEYUP, 0);
 			}
@@ -659,6 +683,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			// Numeric keypad -> don't remap
 		} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
 			TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
+			if (capsLockActive && (level == 1 || level == 2) && isLetter(key))
+				key = mapScanCodeToChar(level==1 ? 2 : 1, keyInfo.scanCode);
 			if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
 				// if key must be mapped
 				printf("Mapped %d->%c (level %u)\n", keyInfo.scanCode, key, level);
@@ -753,6 +779,9 @@ int main(int argc, char *argv[])
 		GetPrivateProfileStringA("Settings", "symmetricalLevel3Modifiers", "0", returnValue, 100, ini);
 		quoteAsMod3R = (strcmp(returnValue, "1") == 0);
 
+		GetPrivateProfileStringA("Settings", "capsLockEnabled", "0", returnValue, 100, ini);
+		capsLockEnabled = (strcmp(returnValue, "1") == 0);
+
 		GetPrivateProfileStringA("Settings", "shiftLockEnabled", "0", returnValue, 100, ini);
 		shiftLockEnabled = (strcmp(returnValue, "1") == 0);
 
@@ -765,9 +794,13 @@ int main(int argc, char *argv[])
 		GetPrivateProfileStringA("Settings", "supportLevels5and6", "0", returnValue, 100, ini);
 		supportLevels5and6 = (strcmp(returnValue, "1") == 0);
 
+		if (capsLockEnabled)
+			shiftLockEnabled = false;
+
 		printf("Einstellungen aus %s:\n", ini);
 		printf("Layout: %s\n", layout);
 		printf("quoteAsMod3R: %d\n", quoteAsMod3R);
+		printf("capsLockEnabled: %d\n", capsLockEnabled);
 		printf("shiftLockEnabled: %d\n", shiftLockEnabled);
 		printf("qwertzForShortcuts: %d\n", qwertzForShortcuts);
 		printf("swapLeftCtrlAndLeftAlt: %d\n", swapLeftCtrlAndLeftAlt);

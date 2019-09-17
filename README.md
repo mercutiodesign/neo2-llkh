@@ -15,7 +15,8 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 ## Funktionsumfang
 * Alle 6 Ebenen (die Ebenen 5 und 6 sind nicht komplett und es funktionieren nicht alle Zeichen)
 * Die meisten toten Tasten werden unterstützt: ``^ ` ´ ̧ ̌ ~ ° ̇  `` (teilweise muss die tote Taste vor, teilweise nach dem Buchstaben gedrückt werden)
-* "CapsLock": Ebene 2 kann eingerastet werden (beide Shift-Tasten gleichzeitig)
+* Level2-Lock: Ebene 2 kann eingerastet werden (beide Shift-Tasten gleichzeitig)
+* Echtes CapsLock: Alle Buchstaben groß schreiben. Zahlen, Punkt und Komma bleiben unverändert. (Beide Shift-Tasten gleichzeitig)
 * Der rechte Ebene3-Modifier kann auf die ä-Taste gelegt werden
 * Wenn gewünscht, gilt für Shortcuts (mit Strg, Alt und/oder Win) das QWERTZ-Layout
 * Die linke Strg- und Alt-Taste können getauscht werden
@@ -48,6 +49,11 @@ Folgende Layout-Parameter werden erkannt: `neo`, `adnw`, `adnwzjf` (=AdNWzjßf),
 Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktiviert werden. Dafür muss der Wert von `shiftLockEnabled` in der `settings.ini` auf `1` gesetzt werden:
 
 `shiftLockEnabled=1`
+
+### Echtes CapsLock
+CapsLock (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktiviert werden. Dafür muss der Wert von `capsLockEnabled` in der `settings.ini` auf `1` gesetzt werden:
+
+`capsLockEnabled=1`
 
 ### Symmetrische Level3-Modifier
 Wenn du den rechten Modifier auf die `Ä`- statt auf die `#`-Taste legen willst, setze den Wert von `symmetricalLevel3Modifiers` auf `1`:
