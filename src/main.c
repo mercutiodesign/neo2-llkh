@@ -350,10 +350,17 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		mappingTable[i] = 0;
 
 	mappingTable[16] = VK_PRIOR;
-	mappingTable[17] = VK_BACK;
-	mappingTable[18] = VK_UP;
-	mappingTable[19] = VK_DELETE;
-	mappingTable[20] = VK_NEXT;
+	if (strcmp(layout, "kou") == 0) {
+		mappingTable[17] = VK_NEXT;
+		mappingTable[18] = VK_UP;
+		mappingTable[19] = VK_BACK;
+		mappingTable[20] = VK_DELETE;
+	} else {
+		mappingTable[17] = VK_BACK;
+		mappingTable[18] = VK_UP;
+		mappingTable[19] = VK_DELETE;
+		mappingTable[20] = VK_NEXT;
+	}
 	mappingTable[30] = VK_HOME;
 	mappingTable[31] = VK_LEFT;
 	mappingTable[32] = VK_DOWN;
