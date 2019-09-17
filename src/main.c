@@ -202,6 +202,8 @@ void initLayout()
 			mappingTableLevel6[43] = mappingTableLevel6[40];
 		}
 	}
+	
+	mappingTableLevel2[8] = 0x20AC;  // €
 }
 
 /**
@@ -246,7 +248,8 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 {
 	SHORT keyScanResult = VkKeyScanEx(key, GetKeyboardLayout(0));
 
-	if (keyScanResult == -1 || shiftLockActive) {
+	if (keyScanResult == -1 || shiftLockActive
+		|| keyInfo.vkCode >= 0x30 || keyInfo.vkCode <= 0x39) {
 		// key not found in the current keyboard layout or shift lock is active
 		//
 		// If shiftLockActive is true, a unicode letter will be sent. This implies
@@ -255,6 +258,8 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 		// Ctrl-s. Sending a unicode letter makes it possible to undo shift
 		// lock temporarily by holding one shift key because that way the
 		// shift key won't be sent.
+		//
+		// Furthermore, use unicode for number keys.
 		sendUnicodeChar(key);
 	} else {
 		keyInfo.vkCode = keyScanResult;
