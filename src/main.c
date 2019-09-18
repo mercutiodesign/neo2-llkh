@@ -687,7 +687,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 				key = mapScanCodeToChar(level==1 ? 2 : 1, keyInfo.scanCode);
 			if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
 				// if key must be mapped
-				printf("Mapped %d->%c (level %u)\n", keyInfo.scanCode, key, level);
+				printf("Mapped %d->%c [0x%04X] (level %u)\n", keyInfo.scanCode, key, key, level);
 				//BYTE state[256];
 				//GetKeyboardState(state);
 				sendChar(key, keyInfo);
