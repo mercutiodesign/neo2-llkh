@@ -352,6 +352,7 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 
 	// A second level 4 mapping table for special (non-unicode) keys.
 	// Maybe this could be included in the global TCHAR mapping table or level 4!?
+	byte bScan = 0;
 	CHAR mappingTable[LEN];
 	for (int i = 0; i < LEN; i++)
 		mappingTable[i] = 0;
@@ -387,6 +388,10 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	mappingTable[57] = '0';
 
 	if (mappingTable[keyInfo.scanCode] != 0) {
+		if (mappingTable[keyInfo.scanCode] == VK_RETURN)
+			bScan = 0x1c;
+		else if (mappingTable[keyInfo.scanCode] == VK_INSERT)
+			bScan = 0x52;  // or 0x52e0?
 		// If arrow key, page up/down, home or end,
 		// send flag 0x01 (bit 0 = extended).
 		// This in necessary for selecting text with shift + arrow.
@@ -400,7 +405,7 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 			|| mappingTable[keyInfo.scanCode]==VK_END)
 			keybd_event(mappingTable[keyInfo.scanCode], 0, 0x01, 0);
 		else
-			keybd_event(mappingTable[keyInfo.scanCode], 0, 0, 0);
+			keybd_event(mappingTable[keyInfo.scanCode], bScan, 0, 0);
 		return true;
 	}
 	return false;
@@ -487,6 +492,7 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 			break;
 		default:
 			keyName = "";
+			//keyName = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
 	}
 	char *shiftLockCapsLockInfo = shiftLockActive ? " [shift lock active]"
 	                              : (capsLockActive ? " [caps lock active]" : "");
@@ -687,7 +693,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 				key = mapScanCodeToChar(level==1 ? 2 : 1, keyInfo.scanCode);
 			if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
 				// if key must be mapped
-				printf("Mapped %d->%c [0x%04X] (level %u)\n", keyInfo.scanCode, key, key, level);
+				int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
+				printf("Mapped %d %c->%c [0x%04X] (level %u)\n", keyInfo.scanCode, character, key, key, level);
 				//BYTE state[256];
 				//GetKeyboardState(state);
 				sendChar(key, keyInfo);
