@@ -28,6 +28,7 @@ bool capsLockEnabled = false;        // enable (allow) caps lock
 bool shiftLockEnabled = false;       // enable (allow) shift lock (disabled if capsLockEnabled is true)
 bool qwertzForShortcuts = false;     // use QWERTZ when Ctrl, Alt or Win is involved
 bool swapLeftCtrlAndLeftAlt = false; // swap left Ctrl and left Alt key
+bool swapLeftCtrlLeftAltAndLeftWin = false;  // swap left Ctrl, left Alt key and left Win key. Resulting order: Win, Alt, Ctrl (on a standard Windows keyboard)
 bool supportLevels5and6 = false;     // support levels five and six (greek letters and mathematical symbols)
 
 /**
@@ -591,6 +592,9 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			if (swapLeftCtrlAndLeftAlt) {
 				altLeftPressed = false;
 				keybd_event(VK_LMENU, 0, KEYEVENTF_KEYUP, 0);
+			} else if (swapLeftCtrlLeftAltAndLeftWin) {
+				winLeftPressed = false;
+				keybd_event(VK_LWIN, 0, KEYEVENTF_KEYUP, 0);
 			} else {
 				ctrlLeftPressed = false;
 				keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
@@ -599,7 +603,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		} else if (keyInfo.vkCode == VK_RCONTROL) {
 			ctrlRightPressed = false;
 		} else if (keyInfo.vkCode == VK_LMENU) {
-			if (swapLeftCtrlAndLeftAlt) {
+			if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
 				ctrlLeftPressed = false;
 				keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
 			} else {
@@ -608,7 +612,14 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			}
 			return -1;
 		} else if (keyInfo.vkCode == VK_LWIN) {
-			winLeftPressed = false;
+			if (swapLeftCtrlLeftAltAndLeftWin) {
+				altLeftPressed = false;
+				keybd_event(VK_LMENU, 0, KEYEVENTF_KEYUP, 0);
+			} else {
+				winLeftPressed = false;
+				keybd_event(VK_LWIN, 0, KEYEVENTF_KEYUP, 0);
+			}
+			return -1;
 		} else if (keyInfo.vkCode == VK_RWIN) {
 			winRightPressed = false;
 		}
@@ -622,6 +633,9 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			if (swapLeftCtrlAndLeftAlt) {
 				altLeftPressed = true;
 				keybd_event(VK_LMENU, 0, 0, 0);
+			} else if (swapLeftCtrlLeftAltAndLeftWin) {
+				winLeftPressed = true;
+				keybd_event(VK_LWIN, 0, 0, 0);
 			} else {
 				ctrlLeftPressed = true;
 				keybd_event(VK_LCONTROL, 0, 0, 0);
@@ -630,7 +644,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		} else if (keyInfo.vkCode == VK_RCONTROL) {
 			ctrlRightPressed = true;
 		} else if (keyInfo.vkCode == VK_LMENU) {
-			if (swapLeftCtrlAndLeftAlt) {
+			if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
 				ctrlLeftPressed = true;
 				keybd_event(VK_LCONTROL, 0, 0, 0);
 			} else {
@@ -639,7 +653,14 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			}
 			return -1;
 		} else if (keyInfo.vkCode == VK_LWIN) {
-			winLeftPressed = true;
+			if (swapLeftCtrlLeftAltAndLeftWin) {
+				altLeftPressed = true;
+				keybd_event(VK_LMENU, 0, 0, 0);
+			} else {
+				winLeftPressed = true;
+				keybd_event(VK_LWIN, 0, 0, 0);
+			}
+			return -1;
 		} else if (keyInfo.vkCode == VK_RWIN) {
 			winRightPressed = true;
 		}
@@ -807,11 +828,17 @@ int main(int argc, char *argv[])
 		GetPrivateProfileStringA("Settings", "swapLeftCtrlAndLeftAlt", "0", returnValue, 100, ini);
 		swapLeftCtrlAndLeftAlt = (strcmp(returnValue, "1") == 0);
 
+		GetPrivateProfileStringA("Settings", "swapLeftCtrlLeftAltAndLeftWin", "0", returnValue, 100, ini);
+		swapLeftCtrlLeftAltAndLeftWin = (strcmp(returnValue, "1") == 0);
+
 		GetPrivateProfileStringA("Settings", "supportLevels5and6", "0", returnValue, 100, ini);
 		supportLevels5and6 = (strcmp(returnValue, "1") == 0);
 
 		if (capsLockEnabled)
 			shiftLockEnabled = false;
+
+		if (swapLeftCtrlLeftAltAndLeftWin)
+			swapLeftCtrlAndLeftAlt = false;
 
 		printf("Einstellungen aus %s:\n", ini);
 		printf("Layout: %s\n", layout);
@@ -820,6 +847,7 @@ int main(int argc, char *argv[])
 		printf("shiftLockEnabled: %d\n", shiftLockEnabled);
 		printf("qwertzForShortcuts: %d\n", qwertzForShortcuts);
 		printf("swapLeftCtrlAndLeftAlt: %d\n", swapLeftCtrlAndLeftAlt);
+		printf("swapLeftCtrlLeftAltAndLeftWin: %d\n", swapLeftCtrlLeftAltAndLeftWin);
 		printf("supportLevels5and6: %d\n\n", supportLevels5and6);
 
 		if (argc >= 2)
@@ -858,7 +886,7 @@ int main(int argc, char *argv[])
 		// ä/quote key instead of #/backslash key for the right level 3 modifier
 		scanCodeMod3R = 40;
 
-	if (swapLeftCtrlAndLeftAlt)
+	if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin)
 		// catch ctrl-c because it will send keydown for ctrl
 		// but then keyup for alt. Then ctrl would be locked.
 		SetConsoleCtrlHandler(CtrlHandler, TRUE);
