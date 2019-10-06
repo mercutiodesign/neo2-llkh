@@ -2,14 +2,15 @@
 
 *alternativer Treiber mittels Low-Level Keyboard Hook*
 
-*Read this in [English](README.en.md)*
+(*Read this in [English](README.en.md)*)
 
 Dieser Treiber unterstützt folgende Tastaturlayouts:
 * [Neo2](http://www.neo-layout.org)
 * [Aus der Neo-Welt](http://www.adnw.de)
 * [AdNWzjßf](http://adnw.de/index.php?n=Main.AdNWzj%c3%9ff)
+* [bone](https://web.archive.org/web/20180721192908/http://wiki.neo-layout.org/wiki/Bone)
 * [KOY](http://adnw.de/index.php?n=Main.SeitlicheNachbaranschl%c3%a4ge)
-* KOU (mein persönliches Layout auf Basis von KOY)
+* [KOU](maximilian-schillinger.de/kou-layout.html) (mein persönliches Layout auf Basis von KOY)
 
 
 ## Funktionsumfang
@@ -43,7 +44,7 @@ Wenn du ein anderers Layout verwenden möchtest, ändere den `layout`-Eintrag in
 
 `layout=adnw`
 
-Folgende Layout-Parameter werden erkannt: `neo`, `adnw`, `adnwzjf` (=AdNWzjßf), `koy`, `kou`.
+Folgende Layout-Parameter werden erkannt: `neo`, `adnw`, `adnwzjf` (=AdNWzjßf), `bone`, `koy`, `kou`.
 
 ### Einrasten von Ebene 2
 Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktiviert werden. Dafür muss der Wert von `shiftLockEnabled` in der `settings.ini` auf `1` gesetzt werden:
@@ -69,6 +70,12 @@ Außerdem gibt es einen Modus, in dem bei Shortcuts immer das QWERTZ-Layout gilt
 Für Mac-Freunde, die es gewohnt sind, Shortcuts mit dem linken Daumen auszuführen.
 
 `swapLeftCtrlAndLeftAlt=1`
+
+### Linke Alt-, Strg- und Win-Taste vertauschen
+Wie die vorige Option, allerdings wird hier zusätzlich die linke Windows-Taste versetzt.
+Damit ergibt sich die Reihenfolge: Win, Alt, Ctrl (auf Standardtastaturen)
+
+`swapLeftCtrlLeftAltAndLeftWin=1`
 
 ### Ebenen 5 und 6
 Achtung: Experimentell! Die Ebenen 5 und 6 sind für die Zahlentasten noch nicht umgesetzt. Auch im Buchstabenfeld funktionieren nicht alle Tasten (obwohl ihnen Symbole zugewiesen wurden).
