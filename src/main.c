@@ -388,24 +388,27 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	mappingTable[57] = '0';
 
 	if (mappingTable[keyInfo.scanCode] != 0) {
-		if (mappingTable[keyInfo.scanCode] == VK_RETURN)
-			bScan = 0x1c;
-		else if (mappingTable[keyInfo.scanCode] == VK_INSERT)
-			bScan = 0x52;  // or 0x52e0?
+//		if (mappingTable[keyInfo.scanCode] == VK_RETURN)
+//			bScan = 0x1c;
+//		else if (mappingTable[keyInfo.scanCode] == VK_INSERT)
+//			bScan = 0x52;  // or 0x52e0?
 		// If arrow key, page up/down, home or end,
 		// send flag 0x01 (bit 0 = extended).
 		// This in necessary for selecting text with shift + arrow.
-		if (mappingTable[keyInfo.scanCode]==VK_LEFT
-			|| mappingTable[keyInfo.scanCode]==VK_RIGHT
-			|| mappingTable[keyInfo.scanCode]==VK_UP
-			|| mappingTable[keyInfo.scanCode]==VK_DOWN
-			|| mappingTable[keyInfo.scanCode]==VK_PRIOR
-			|| mappingTable[keyInfo.scanCode]==VK_NEXT
-			|| mappingTable[keyInfo.scanCode]==VK_HOME
-			|| mappingTable[keyInfo.scanCode]==VK_END)
+//		if (mappingTable[keyInfo.scanCode]==VK_LEFT
+//			|| mappingTable[keyInfo.scanCode]==VK_RIGHT
+//			|| mappingTable[keyInfo.scanCode]==VK_UP
+//			|| mappingTable[keyInfo.scanCode]==VK_DOWN
+//			|| mappingTable[keyInfo.scanCode]==VK_PRIOR
+//			|| mappingTable[keyInfo.scanCode]==VK_NEXT
+//			|| mappingTable[keyInfo.scanCode]==VK_HOME
+//			|| mappingTable[keyInfo.scanCode]==VK_END
+//			|| mappingTable[keyInfo.scanCode]==VK_INSERT
+//			|| mappingTable[keyInfo.scanCode]==VK_RETURN)
+			// always send extended flag (maybe this fixes mousepad issues)
 			keybd_event(mappingTable[keyInfo.scanCode], 0, 0x01, 0);
-		else
-			keybd_event(mappingTable[keyInfo.scanCode], bScan, 0, 0);
+//		else
+//			keybd_event(mappingTable[keyInfo.scanCode], bScan, 0, 0);
 		return true;
 	}
 	return false;
