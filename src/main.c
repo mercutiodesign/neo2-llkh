@@ -3,6 +3,7 @@
  * Alternative Windows driver for the Neo2 based keyboard layouts:
  * Neo2, (www.neo-layout.org)
  * AdNW, AdNWzjßf, KOY (www.adnw.de)
+ * bone (https://web.archive.org/web/20180721192908/http://wiki.neo-layout.org/wiki/Bone)
  */
 
 #include <windows.h>
@@ -137,6 +138,11 @@ void initLayout()
 		wcscpy(mappingTableLevel1 + 16, L"kuü.ävgclßz´");
 		wcscpy(mappingTableLevel1 + 30, L"hieaodtrnsf");
 		wcscpy(mappingTableLevel1 + 44, L"xyö,qbpwmj");
+
+	} else if (strcmp(layout, "bone") == 0) {
+		wcscpy(mappingTableLevel1 + 16, L"jduaxphlmwß´");
+		wcscpy(mappingTableLevel1 + 30, L"ctieobnrsgq");
+		wcscpy(mappingTableLevel1 + 44, L"fvüäöyz,.k");
 
 	} else if (strcmp(layout, "koy") == 0) {
 		wcscpy(mappingTableLevel1 + 16, L"k.o,yvgclßz´");
@@ -823,7 +829,7 @@ int main(int argc, char *argv[])
 		printf("Keine Einstellungen gefunden: %s\n", ini);
 
 		// the first parameter sets the layout (optional):
-		// neo (default), adnw, adnwzjf, koy, kou
+		// neo (default), adnw, adnwzjf, bone, koy, kou
 		if (argc >= 2)
 			//layout = argv[1];
 			strcpy(layout, argv[1]);
