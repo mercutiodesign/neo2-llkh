@@ -89,3 +89,8 @@ Damit ergibt sich die Reihenfolge: Win, Alt, Ctrl (auf Standardtastaturen)
 Achtung: Experimentell! Die Ebenen 5 und 6 sind für die Zahlentasten noch nicht umgesetzt. Auch im Buchstabenfeld funktionieren nicht alle Tasten (obwohl ihnen Symbole zugewiesen wurden).
 
 `supportLevels5and6=1`
+
+### CapsLock-Taste als Escape verwenden
+Für vim-Freunde: Wenn die CapsLock-Taste einzeln angeschlagen wird, sendet sie ein Escape. In Kombination mit anderen Tasten ist sie der linke Ebene3-Modifier.
+
+`capsLockAsEscape=1`

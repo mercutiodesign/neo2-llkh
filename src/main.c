@@ -31,6 +31,7 @@ bool qwertzForShortcuts = false;     // use QWERTZ when Ctrl, Alt or Win is invo
 bool swapLeftCtrlAndLeftAlt = false; // swap left Ctrl and left Alt key
 bool swapLeftCtrlLeftAltAndLeftWin = false;  // swap left Ctrl, left Alt key and left Win key. Resulting order: Win, Alt, Ctrl (on a standard Windows keyboard)
 bool supportLevels5and6 = false;     // support levels five and six (greek letters and mathematical symbols)
+bool capsLockAsEscape = false;       // if true, hitting CapsLock alone sends Esc
 
 /**
  * True if no mapping should be done
@@ -48,6 +49,7 @@ bool capsLockActive = false;
 
 bool level3modLeftPressed = false;
 bool level3modRightPressed = false;
+bool level3modLeftAndNoOtherKeyPressed = false;
 
 bool level4modLeftPressed = false;
 bool level4modRightPressed = false;
@@ -575,11 +577,21 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			}
 			return -1;
 		} else if (isMod3(keyInfo)) {
-			if (keyInfo.scanCode == scanCodeMod3R)
+			if (keyInfo.scanCode == scanCodeMod3R) {
 				level3modRightPressed = false;
-			else  // VK_CAPITAL (CapsLock)
+				mod3Pressed = level3modLeftPressed | level3modRightPressed;
+			} else {  // VK_CAPITAL (CapsLock)
 				level3modLeftPressed = false;
-			mod3Pressed = level3modLeftPressed | level3modRightPressed;
+				mod3Pressed = level3modLeftPressed | level3modRightPressed;
+				if (capsLockAsEscape && level3modLeftAndNoOtherKeyPressed) {
+					// release CapsLock/Mod3_L
+					keybd_event(VK_CAPITAL, 0, KEYEVENTF_KEYUP, 0);
+					// send Escape
+					keybd_event(VK_ESCAPE, 0, 0x01, 0);
+					level3modLeftAndNoOtherKeyPressed = false;
+					return -1;
+				}
+			}
 			return -1;
 		} else if (isMod4(keyInfo)) {
 			if (keyInfo.vkCode == VK_OEM_102) {
@@ -639,6 +651,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 
 	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
 		logKeyEvent("\nkey down", keyInfo);
+
+		level3modLeftAndNoOtherKeyPressed = false;
 
 		// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
 		if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
@@ -703,10 +717,13 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			}
 			return -1;
 		} else if (isMod3(keyInfo)) {
-			if (keyInfo.scanCode == scanCodeMod3R)
+			if (keyInfo.scanCode == scanCodeMod3R) {
 				level3modRightPressed = true;
-			else  // VK_CAPITAL (CapsLock)
+			} else {  // VK_CAPITAL (CapsLock)
 				level3modLeftPressed = true;
+				if (capsLockAsEscape)
+					level3modLeftAndNoOtherKeyPressed = true;
+			}
 			mod3Pressed = level3modLeftPressed | level3modRightPressed;
 			return -1;
 		} else if (isMod4(keyInfo)) {
@@ -849,6 +866,9 @@ int main(int argc, char *argv[])
 		GetPrivateProfileStringA("Settings", "supportLevels5and6", "0", returnValue, 100, ini);
 		supportLevels5and6 = (strcmp(returnValue, "1") == 0);
 
+		GetPrivateProfileStringA("Settings", "capsLockAsEscape", "0", returnValue, 100, ini);
+		capsLockAsEscape = (strcmp(returnValue, "1") == 0);
+
 		if (capsLockEnabled)
 			shiftLockEnabled = false;
 
@@ -864,7 +884,8 @@ int main(int argc, char *argv[])
 		printf("qwertzForShortcuts: %d\n", qwertzForShortcuts);
 		printf("swapLeftCtrlAndLeftAlt: %d\n", swapLeftCtrlAndLeftAlt);
 		printf("swapLeftCtrlLeftAltAndLeftWin: %d\n", swapLeftCtrlLeftAltAndLeftWin);
-		printf("supportLevels5and6: %d\n\n", supportLevels5and6);
+		printf("supportLevels5and6: %d\n", supportLevels5and6);
+		printf("capsLockAsEscape: %d\n\n", capsLockAsEscape);
 
 		if (argc >= 2)
 			printf("Kommandozeilenparameter werden ignoriert, da eine settings.ini gefunden wurde!\n\n");
