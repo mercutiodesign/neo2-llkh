@@ -26,6 +26,7 @@ bool quoteAsMod3R = false;           // use quote/ä as right level 3 modifier
 int scanCodeMod3R = 43;              // this scan code depends on quoteAsMod3R
 bool capsLockEnabled = false;        // enable (allow) caps lock
 bool shiftLockEnabled = false;       // enable (allow) shift lock (disabled if capsLockEnabled is true)
+bool level4LockEnabled = false;      // enable (allow) level 4 lock (toggle by pressing both Mod4 keys at the same time)
 bool qwertzForShortcuts = false;     // use QWERTZ when Ctrl, Alt or Win is involved
 bool swapLeftCtrlAndLeftAlt = false; // swap left Ctrl and left Alt key
 bool swapLeftCtrlLeftAltAndLeftWin = false;  // swap left Ctrl, left Alt key and left Win key. Resulting order: Win, Alt, Ctrl (on a standard Windows keyboard)
@@ -50,6 +51,7 @@ bool level3modRightPressed = false;
 
 bool level4modLeftPressed = false;
 bool level4modRightPressed = false;
+bool level4LockActive = false;
 
 bool ctrlLeftPressed = false;
 bool ctrlRightPressed = false;
@@ -257,7 +259,7 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 {
 	SHORT keyScanResult = VkKeyScanEx(key, GetKeyboardLayout(0));
 
-	if (keyScanResult == -1 || shiftLockActive || capsLockActive
+	if (keyScanResult == -1 || shiftLockActive || capsLockActive || level4LockActive
 		|| (keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39)) {
 		// key not found in the current keyboard layout or shift lock is active
 		//
@@ -506,8 +508,9 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 	}
 	char *shiftLockCapsLockInfo = shiftLockActive ? " [shift lock active]"
 	                              : (capsLockActive ? " [caps lock active]" : "");
-	printf("%-10s sc %u vk 0x%x 0x%x %d %s%s\n", desc, keyInfo.scanCode, keyInfo.vkCode,
-	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockCapsLockInfo);
+	char *level4LockInfo = level4LockActive ? " [level4 lock active]" : "";
+	printf("%-10s sc %u vk 0x%x 0x%x %d %s%s%s\n", desc, keyInfo.scanCode, keyInfo.vkCode,
+	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockCapsLockInfo, level4LockInfo);
 }
 
 __declspec(dllexport)
@@ -579,10 +582,19 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			mod3Pressed = level3modLeftPressed | level3modRightPressed;
 			return -1;
 		} else if (isMod4(keyInfo)) {
-			if (keyInfo.vkCode == VK_OEM_102)
+			if (keyInfo.vkCode == VK_OEM_102) {
 				level4modLeftPressed = false;
-			else  // VK_RMENU (AltGr)
+				if (level4modRightPressed && level4LockEnabled) {
+					level4LockActive = !level4LockActive;
+					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+				}
+			} else {  // VK_RMENU (AltGr)
 				level4modRightPressed = false;
+				if (level4modLeftPressed && level4LockEnabled) {
+					level4LockActive = !level4LockActive;
+					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+				}
+			}
 			mod4Pressed = level4modLeftPressed | level4modRightPressed;
 			return -1;
 		}
@@ -674,7 +686,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 				level = 5;
 			else
 				level = 3;
-		if (mod4Pressed)
+		if (mod4Pressed != level4LockActive)
 			if (supportLevels5and6 && level == 3)
 				level = 6;
 			else
@@ -822,6 +834,9 @@ int main(int argc, char *argv[])
 		GetPrivateProfileStringA("Settings", "shiftLockEnabled", "0", returnValue, 100, ini);
 		shiftLockEnabled = (strcmp(returnValue, "1") == 0);
 
+		GetPrivateProfileStringA("Settings", "level4LockEnabled", "0", returnValue, 100, ini);
+		level4LockEnabled = (strcmp(returnValue, "1") == 0);
+
 		GetPrivateProfileStringA("Settings", "qwertzForShortcuts", "0", returnValue, 100, ini);
 		qwertzForShortcuts = (strcmp(returnValue, "1") == 0);
 
@@ -845,6 +860,7 @@ int main(int argc, char *argv[])
 		printf("quoteAsMod3R: %d\n", quoteAsMod3R);
 		printf("capsLockEnabled: %d\n", capsLockEnabled);
 		printf("shiftLockEnabled: %d\n", shiftLockEnabled);
+		printf("level4LockEnabled: %d\n", level4LockEnabled);
 		printf("qwertzForShortcuts: %d\n", qwertzForShortcuts);
 		printf("swapLeftCtrlAndLeftAlt: %d\n", swapLeftCtrlAndLeftAlt);
 		printf("swapLeftCtrlLeftAltAndLeftWin: %d\n", swapLeftCtrlLeftAltAndLeftWin);
