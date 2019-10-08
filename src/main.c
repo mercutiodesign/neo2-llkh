@@ -389,7 +389,7 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		mappingTable[44] = VK_INSERT;
 		mappingTable[45] = VK_TAB;
 		mappingTable[46] = VK_RETURN;
-		mappingTable[48] = VK_ESCAPE;
+		mappingTable[47] = VK_ESCAPE;
 	} else {
 		mappingTable[44] = VK_ESCAPE;
 		mappingTable[45] = VK_TAB;
