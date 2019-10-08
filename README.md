@@ -14,7 +14,7 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 
 
 ## Funktionsumfang
-* Alle 6 Ebenen (die Ebenen 5 und 6 sind nicht komplett und es funktionieren nicht alle Zeichen)
+* Alle 6 Ebenen (auf den Ebenen 5 und 6 funktionieren nicht alle Zeichen)
 * Die meisten toten Tasten werden unterstützt: ``^ ` ´ ̧ ̌ ~ ° ̇  `` (teilweise muss die tote Taste vor, teilweise nach dem Buchstaben gedrückt werden)
 * Level2-Lock: Ebene 2 kann eingerastet werden (beide Shift-Tasten gleichzeitig)
 * Echtes CapsLock: Alle Buchstaben groß schreiben. Zahlen, Punkt und Komma bleiben unverändert. (Beide Shift-Tasten gleichzeitig)
@@ -22,10 +22,11 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 * Der rechte Ebene3-Modifier kann auf die ä-Taste gelegt werden
 * Wenn gewünscht, gilt für Shortcuts (mit Strg, Alt und/oder Win) das QWERTZ-Layout
 * Die linke Strg- und Alt-Taste können getauscht werden
+* Alternativ können die linke Strg-, Alt- und Windows-Taste getauscht werden
+* Die CapsLock-Taste kann in eine zusätzliche Escape-Taste verwandelt werden (wenn sie alleine angeschlagen wird)
 
 ### Was nicht funktioniert
 
-* Das Einrasten von Ebene 4 (beide Level4-Modifier gleichzeitig).
 * Diese Tasten sollten eigentlich tote Tasten sein, geben aber direkt die entsprechenden Symbole aus: `̷  ¨ ˝`
 
 ## Selbst kompilieren
