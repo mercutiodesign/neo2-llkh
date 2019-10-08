@@ -258,7 +258,7 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 	SHORT keyScanResult = VkKeyScanEx(key, GetKeyboardLayout(0));
 
 	if (keyScanResult == -1 || shiftLockActive || capsLockActive
-		|| keyInfo.vkCode >= 0x30 || keyInfo.vkCode <= 0x39) {
+		|| (keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39)) {
 		// key not found in the current keyboard layout or shift lock is active
 		//
 		// If shiftLockActive is true, a unicode letter will be sent. This implies
