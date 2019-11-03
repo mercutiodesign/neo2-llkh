@@ -481,6 +481,9 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 		case VK_RSHIFT:
 			keyName = "(Shift right)";
 			break;
+		case VK_SHIFT:
+			keyName = "(Shift)";
+			break;
 		case VK_CAPITAL:
 			keyName = "(M3 left)";
 			break;
@@ -489,6 +492,9 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 			break;
 		case 0xbf:  // #
 			keyName = quoteAsMod3R ? "" : "(M3 right)";
+			break;
+		case VK_OEM_102:
+			keyName = "(M4 left [<])";
 			break;
 		case VK_CONTROL:
 			keyName = "(Ctrl)";
@@ -513,6 +519,12 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 			break;
 		case VK_RWIN:
 			keyName = "(Win right)";
+			break;
+		case VK_BACK:
+			keyName = "(Backspace)";
+			break;
+		case VK_RETURN:
+			keyName = "(Return)";
 			break;
 		default:
 			keyName = "";
@@ -571,7 +583,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 						printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
 					}
 				}
-				keybd_event(VK_RSHIFT, 0, KEYEVENTF_KEYUP, 0);
+				keybd_event(VK_RSHIFT, 54, KEYEVENTF_KEYUP, 0);
 			} else {
 				shiftLeftPressed = false;
 				if (shiftRightPressed) {
@@ -583,7 +595,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 						printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
 					}
 				}
-				keybd_event(VK_LSHIFT, 0, KEYEVENTF_KEYUP, 0);
+				keybd_event(VK_LSHIFT, 42, KEYEVENTF_KEYUP, 0);
 			}
 			return -1;
 		} else if (isMod3(keyInfo)) {
