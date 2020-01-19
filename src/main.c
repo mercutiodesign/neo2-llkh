@@ -155,9 +155,9 @@ void initLayout()
 		wcscpy(mappingTableLevel1 + 44, L"xqäüöbpwmj");
 
 	} else if (strcmp(layout, "kou") == 0) {
-		wcscpy(mappingTableLevel1 + 16, L"k.ouävgclfj´");
+		wcscpy(mappingTableLevel1 + 16, L"k.ouäqgclfj´");
 		wcscpy(mappingTableLevel1 + 30, L"haeiybtrnsß");
-		wcscpy(mappingTableLevel1 + 44, L"qx,üöpdwmz");
+		wcscpy(mappingTableLevel1 + 44, L"zx,üöpdwmv");
 
 		wcscpy(mappingTableLevel3 + 16, L"→%{}^•<>=&€̷");
 		wcscpy(mappingTableLevel3 + 30, L"\"'()*?/:-_@");
