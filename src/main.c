@@ -79,7 +79,7 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 		// Handle the Ctrl-c signal.
 		case CTRL_C_EVENT:
 			printf("\nCtrl-c detected!\n");
-			printf("Please quit using the tray icon!\n\n");
+			printf("Please quit by using the tray icon!\n\n");
 			return TRUE;
 
 		default:
@@ -215,7 +215,7 @@ void initLayout()
 			mappingTableLevel6[43] = mappingTableLevel6[40];
 		}
 	}
-	
+
 	mappingTableLevel2[8] = 0x20AC;  // €
 }
 
