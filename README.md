@@ -28,6 +28,12 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 ### Was nicht funktioniert
 
 * Diese Tasten sollten eigentlich tote Tasten sein, geben aber direkt die entsprechenden Symbole aus: `̷  ¨ ˝`
+* Die Ebenen 3-6 für den Nummernblock fehlen.
+
+### Bekannte Fehler
+
+* Ein Benutzer hat berichtet, dass es ab und zu passiert, dass die Strg-Taste "virtuell" zu klemmen scheint. Wenn das passiert, kann jede weitere Eingabe eine Tastenkombination mit Strg auslösen. **Vorsicht: Hier besteht die Gefahr eines Datenverlustes** (wenn z.B. ein ungespeichertes Dokument ungewollt geschlossen wird). Leider konnte ich noch nicht herausfinden, wie es dazu kommen kann. Ich bin für jeden Hinweis dankbar.
+* Eine Benutzerin hat berichtet, dass die Scollfunktion ihres Touchpads ausfällt, wenn sie Enter (AltGr+V) oder Escape (AltGr+Y) auf Ebene 4 im Neo-Layout betätigt.
 
 ## Selbst kompilieren
 Um diesen Treiber aus den Quellen zu installieren, klone dieses Projekt (`git clone https://github.com/MaxGyver83/neo2-llkh.git`) oder lade es als zip herunter und entpacke es. Führe dann `make` im `src`-Ordner aus. Dafür müssen make und gcc installiert sein. Wenn du diese Programme noch nicht hast, könntest du z.B. [MinGW](https://sourceforge.net/projects/mingw/) installieren.
@@ -63,7 +69,7 @@ Das Einrasten von Ebene 4 (beide Mod4-Tasten \[`<>` + `AltGr`\] gleichzeitig) wi
 
 `level4LockEnabled=1`
 
-Wenn Level2- und Level4-Lock aktiv sind, wirkt nur der Level4-Lock. 
+Wenn Level2- und Level4-Lock aktiv sind, wirkt nur der Level4-Lock.
 
 ### Symmetrische Level3-Modifier
 Wenn du den rechten Modifier auf die `Ä`- statt auf die `#`-Taste legen willst, setze den Wert von `symmetricalLevel3Modifiers` auf `1`:
@@ -87,7 +93,7 @@ Damit ergibt sich die Reihenfolge: Win, Alt, Ctrl (auf Standardtastaturen)
 `swapLeftCtrlLeftAltAndLeftWin=1`
 
 ### Ebenen 5 und 6
-Achtung: Experimentell! Die Ebenen 5 und 6 sind für die Zahlentasten noch nicht umgesetzt. Auch im Buchstabenfeld funktionieren nicht alle Tasten (obwohl ihnen Symbole zugewiesen wurden).
+Achtung: Experimentell! Nicht alle Tasten funktionieren, obwohl ihnen Symbole zugewiesen wurden. Möglicherweise können nicht alle Programme alle Zeichen darstellen.
 
 `supportLevels5and6=1`
 
