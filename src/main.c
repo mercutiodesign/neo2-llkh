@@ -159,9 +159,9 @@ void initLayout()
 		wcscpy(mappingTableLevel1 + 30, L"haeiybtrnsß");
 		wcscpy(mappingTableLevel1 + 44, L"zx,üöpdwmv");
 
-		wcscpy(mappingTableLevel3 + 16, L"→%{}^•<>=&€̷");
-		wcscpy(mappingTableLevel3 + 30, L"\"'()*?/:-_@");
-		wcscpy(mappingTableLevel3 + 44, L"#|`~$+[]\\;");
+		wcscpy(mappingTableLevel3 + 16, L"@%{}^•<>=&€̷");
+		wcscpy(mappingTableLevel3 + 30, L"|`()*?/:-_→");
+		wcscpy(mappingTableLevel3 + 44, L"#[]~$+\"'\\;");
 
 		wcscpy(mappingTableLevel4 +  4, L"✔✘·£¤0/*-¨");
 		wcscpy(mappingTableLevel4 + 21, L":789+−˝");
@@ -337,7 +337,7 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		case 27:
 			sendChar(L'̷', keyInfo);  // bar (diakritischer Schrägstrich)
 			return true;
-		case 46:
+		case 31:
 			if (strcmp(layout, "kou") == 0) {
 				sendChar(L'`', keyInfo);
 				keybd_event(VK_SPACE, 0, 0, 0);
