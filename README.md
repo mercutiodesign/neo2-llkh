@@ -101,3 +101,15 @@ Achtung: Experimentell! Nicht alle Tasten funktionieren, obwohl ihnen Symbole zu
 Für vim-Freunde: Wenn die CapsLock-Taste einzeln angeschlagen wird, sendet sie ein Escape. In Kombination mit anderen Tasten ist sie der linke Ebene3-Modifier.
 
 `capsLockAsEscape=1`
+
+### Einstellungen als Parameter
+
+Wenn der Treiber über die Kommandozeile gestartet wird, können alle Einstellungen auch als Parameter übergeben werden. Beispiel:
+
+`neo-llkh layout=koy supportLevels5and6=1 qwertzForShortcuts=1`
+
+Das Layout kann auch direkt angeben werden:
+
+`neo-llkh adnw`
+
+Die Einstellungen aus der `settings.ini` werden trotzdem berücksichtigt. Wenn ein Parameter sowohl in der `settings.ini` als auch in der Kommandozeile gesetzt wird, hat letzterer Vorrang.

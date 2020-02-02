@@ -897,49 +897,101 @@ int main(int argc, char *argv[])
 		if (swapLeftCtrlLeftAltAndLeftWin)
 			swapLeftCtrlAndLeftAlt = false;
 
-		printf("Einstellungen aus %s:\n", ini);
-		printf("Layout: %s\n", layout);
-		printf("quoteAsMod3R: %d\n", quoteAsMod3R);
-		printf("capsLockEnabled: %d\n", capsLockEnabled);
-		printf("shiftLockEnabled: %d\n", shiftLockEnabled);
-		printf("level4LockEnabled: %d\n", level4LockEnabled);
-		printf("qwertzForShortcuts: %d\n", qwertzForShortcuts);
-		printf("swapLeftCtrlAndLeftAlt: %d\n", swapLeftCtrlAndLeftAlt);
-		printf("swapLeftCtrlLeftAltAndLeftWin: %d\n", swapLeftCtrlLeftAltAndLeftWin);
-		printf("supportLevels5and6: %d\n", supportLevels5and6);
-		printf("capsLockAsEscape: %d\n\n", capsLockAsEscape);
+		printf("\nEinstellungen aus %s:\n", ini);
+		printf(" Layout: %s\n", layout);
+		printf(" symmetricalLevel3Modifiers: %d\n", quoteAsMod3R);
+		printf(" capsLockEnabled: %d\n", capsLockEnabled);
+		printf(" shiftLockEnabled: %d\n", shiftLockEnabled);
+		printf(" level4LockEnabled: %d\n", level4LockEnabled);
+		printf(" qwertzForShortcuts: %d\n", qwertzForShortcuts);
+		printf(" swapLeftCtrlAndLeftAlt: %d\n", swapLeftCtrlAndLeftAlt);
+		printf(" swapLeftCtrlLeftAltAndLeftWin: %d\n", swapLeftCtrlLeftAltAndLeftWin);
+		printf(" supportLevels5and6: %d\n", supportLevels5and6);
+		printf(" capsLockAsEscape: %d\n\n", capsLockAsEscape);
 
-		if (argc >= 2)
-			printf("Kommandozeilenparameter werden ignoriert, da eine settings.ini gefunden wurde!\n\n");
+		//if (argc >= 2)
+		//	printf("Kommandozeilenparameter werden ignoriert, da eine settings.ini gefunden wurde!\n\n");
 
 	} else {
-		printf("Keine Einstellungen gefunden: %s\n", ini);
+		printf("\nKeine settings.ini gefunden: %s\n\n", ini);
+	}
 
-		// the first parameter sets the layout (optional):
-		// neo (default), adnw, adnwzjf, bone, koy, kou
-		if (argc >= 2)
-			//layout = argv[1];
-			strcpy(layout, argv[1]);
-		else
-			//layout = "neo";
-			strcpy(layout, "neo");
 
-		// if the second parameter is 1, quote and backslash (ä and #) will be swapped
-		if (argc >= 3 && strcmp(argv[2], "1") == 0) {
-			quoteAsMod3R = true;
-		}
+	if (argc >= 2) {
+		printf("Einstellungen von der Kommandozeile:");
+		char delimiter[] = "=";
+		char *param, *value;
+		for (int i=1; i< argc; i++) {
+			if (strcmp(argv[i], "neo") == 0
+				|| strcmp(argv[i], "adnw") == 0
+				|| strcmp(argv[i], "adnwzjf") == 0
+				|| strcmp(argv[i], "bone") == 0
+				|| strcmp(argv[i], "koy") == 0
+				|| strcmp(argv[i], "kou") == 0) {
+				strncpy(layout, argv[i], 100);
+				printf("\n Layout: %s", layout);
 
-		// If the third parameter is 1, shift lock is enabled.
-		// Toggle by pressing both shift keys at the same time.
-		if (argc >= 4 && strcmp(argv[3], "1") == 0) {
-			shiftLockEnabled = true;
-		}
+			} else if (strstr(argv[i], "=") != NULL) {
+				//printf("\narg%d: %s", i, argv[i]);
+				param = strtok(argv[i], delimiter);
+				if (param != NULL) {
+					value = strtok(NULL, delimiter);
+					if (value != NULL) {
+						//printf("\n%s ist %s", param, value);
+					}
+				}
 
-		// If the fourth parameter is 1, "qwertz for shortcuts" is enabled.
-		if (argc >= 5 && strcmp(argv[4], "1") == 0) {
-			qwertzForShortcuts = true;
+				if (strcmp(param, "layout") == 0) {
+					if (value != NULL) {
+						strncpy(layout, value, 100);
+						printf("\n Layout: %s", layout);
+					}
+
+				} else if (strcmp(param, "symmetricalLevel3Modifiers") == 0) {
+					quoteAsMod3R = value==NULL ? false : (strcmp(value, "1") == 0);
+					printf("\n symmetricalLevel3Modifiers: %d", quoteAsMod3R);
+
+				} else if (strcmp(param, "capsLockEnabled") == 0) {
+					capsLockEnabled = value==NULL ? false : (strcmp(value, "1") == 0);
+					printf("\n capsLockEnabled: %d", capsLockEnabled);
+
+				} else if (strcmp(param, "shiftLockEnabled") == 0) {
+					shiftLockEnabled = value==NULL ? false : (strcmp(value, "1") == 0);
+					printf("\n shiftLockEnabled: %d", shiftLockEnabled);
+
+				} else if (strcmp(param, "level4LockEnabled") == 0) {
+					level4LockEnabled = value==NULL ? false : (strcmp(value, "1") == 0);
+					printf("\n level4LockEnabled: %d", level4LockEnabled);
+
+				} else if (strcmp(param, "qwertzForShortcuts") == 0) {
+					qwertzForShortcuts = value==NULL ? false : (strcmp(value, "1") == 0);
+					printf("\n qwertzForShortcuts: %d", qwertzForShortcuts);
+
+				} else if (strcmp(param, "swapLeftCtrlAndLeftAlt") == 0) {
+					swapLeftCtrlAndLeftAlt = value==NULL ? false : (strcmp(value, "1") == 0);
+					printf("\n swapLeftCtrlAndLeftAlt: %d", swapLeftCtrlAndLeftAlt);
+
+				} else if (strcmp(param, "swapLeftCtrlLeftAltAndLeftWin") == 0) {
+					swapLeftCtrlLeftAltAndLeftWin = value==NULL ? false : (strcmp(value, "1") == 0);
+					printf("\n swapLeftCtrlLeftAltAndLeftWin: %d", swapLeftCtrlLeftAltAndLeftWin);
+
+				} else if (strcmp(param, "supportLevels5and6") == 0) {
+					supportLevels5and6 = value==NULL ? false : (strcmp(value, "1") == 0);
+					printf("\n supportLevels5and6: %d", supportLevels5and6);
+
+				} else if (strcmp(param, "capsLockAsEscape") == 0) {
+					capsLockAsEscape = value==NULL ? false : (strcmp(value, "1") == 0);
+					printf("\n capsLockAsEscape: %d", capsLockAsEscape);
+
+				} else {
+					printf("\nUnbekannter Parameter:%s", param);
+				}
+			} else {
+				printf("\ninvalid arg: %s", argv[i]);
+			}
 		}
 	}
+	printf("\n\n");
 
 	if (quoteAsMod3R)
 		// ä/quote key instead of #/backslash key for the right level 3 modifier
