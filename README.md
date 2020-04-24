@@ -5,12 +5,12 @@
 (*Read this in [English](README.en.md)*)
 
 Dieser Treiber unterstützt folgende Tastaturlayouts:
-* [Neo2](http://www.neo-layout.org)
+* [Neo2](https://www.neo-layout.org)
 * [Aus der Neo-Welt](http://www.adnw.de)
 * [AdNWzjßf](http://adnw.de/index.php?n=Main.AdNWzj%c3%9ff)
 * [bone](https://web.archive.org/web/20180721192908/http://wiki.neo-layout.org/wiki/Bone)
 * [KOY](http://adnw.de/index.php?n=Main.SeitlicheNachbaranschl%c3%a4ge)
-* [KOU](http://maximilian-schillinger.de/kou-layout.html) (mein persönliches Layout auf Basis von KOY)
+* [KOU](https://maximilian-schillinger.de/kou-layout.html) (mein persönliches Layout auf Basis von KOY)
 
 
 ## Funktionsumfang
@@ -86,11 +86,15 @@ Für Mac-Freunde, die es gewohnt sind, Shortcuts mit dem linken Daumen auszufüh
 
 `swapLeftCtrlAndLeftAlt=1`
 
+Achtung: Bitte den Hinweis am Ende dieser Datei beachten!
+
 ### Linke Alt-, Strg- und Win-Taste vertauschen
 Wie die vorige Option, allerdings wird hier zusätzlich die linke Windows-Taste versetzt.
 Damit ergibt sich die Reihenfolge: Win, Alt, Ctrl (auf Standardtastaturen)
 
 `swapLeftCtrlLeftAltAndLeftWin=1`
+
+Achtung: Bitte den Hinweis am Ende dieser Datei beachten!
 
 ### Ebenen 5 und 6
 Achtung: Experimentell! Nicht alle Tasten funktionieren, obwohl ihnen Symbole zugewiesen wurden. Möglicherweise können nicht alle Programme alle Zeichen darstellen.
@@ -113,3 +117,8 @@ Das Layout kann auch direkt angeben werden:
 `neo-llkh adnw`
 
 Die Einstellungen aus der `settings.ini` werden trotzdem berücksichtigt. Wenn ein Parameter sowohl in der `settings.ini` als auch in der Kommandozeile gesetzt wird, hat letzterer Vorrang.
+
+
+### Vertauschen von Strg und Alt (und ggf. Win)
+
+Wenn du die Option `swapLeftCtrlAndLeftAlt` oder `swapLeftCtrlLeftAltAndLeftWin` verwenden möchtest, solltest du den Treiber unbedingt mit Admin-Rechten starten (Rechtsklick auf `neo2-llkh.exe` → Als Administrator ausführen)! Andernfalls besteht folgende Problematik: In Systemprogrammen (z.B. `regedit`) wird der Treiber ignoriert, es gilt also z.B. QWERTZ. Wenn du mit Alt-Tab zu einem "normalen" Programm wechselst, wird beim Wechsel die Alt-Taste auf Strg umgemappt und dadurch nicht gelöst (weil sie ja zum Zeitpunkt des Lösens bereits eine Strg-Taste ist). Somit bleit Alt "virtuell" gedrückt und der nächste Tastendruck löst einen ungewollten Shortcut mit unerwarteten Folgen aus.
