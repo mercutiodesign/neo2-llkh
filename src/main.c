@@ -89,12 +89,12 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 
 void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars)
 {
-	TCHAR * l1_lowercase = L"abcdefghijklmnopqrstuvwxyzäöüß.,";
+	TCHAR * l1_lowercase = L"abcdefghijklmnopqrstuvwxyzäöüß.,-";
 
 	TCHAR *ptr;
 	for (int i = 0; i < LEN; i++) {
 		ptr = wcschr(l1_lowercase, mappingTableLevel1[i]);
-		if (ptr != NULL && ptr < &l1_lowercase[32]) {
+		if (ptr != NULL && ptr < &l1_lowercase[33]) {
 			//printf("i = %d: mappingTableLevel1[i] = %c; ptr = %d; ptr = %s; index = %d\n", i, mappingTableLevel1[i], ptr, ptr, ptr-l1_lowercase+1);
 			mappingTableOutput[i] = newChars[ptr-l1_lowercase];
 		}
@@ -134,7 +134,18 @@ void initLayout()
 	wcscpy(mappingTableLevel4 + 49, L":123;");
 
 	// layout dependent
-	if (strcmp(layout, "adnw") == 0) {
+	if (strcmp(layout, "neo_qwerty") == 0) {
+		wcscpy(mappingTableLevel1 + 13, L"=");
+		wcscpy(mappingTableLevel1 + 16, L"qwertyuiop[]");
+		wcscpy(mappingTableLevel1 + 30, L"asdfghjkl;'");
+		wcscpy(mappingTableLevel1 + 44, L"zxcvbnm,./");
+
+	} else if (strcmp(layout, "neo_qwertz") == 0) {
+		wcscpy(mappingTableLevel1 + 16, L"qwertzuiopü´");
+		wcscpy(mappingTableLevel1 + 30, L"asdfghjklöä");
+		wcscpy(mappingTableLevel1 + 44, L"yxcvbnm,.-");
+
+	} else if (strcmp(layout, "adnw") == 0) {
 		wcscpy(mappingTableLevel1 + 16, L"kuü.ävgcljf´");
 		wcscpy(mappingTableLevel1 + 30, L"hieaodtrnsß");
 		wcscpy(mappingTableLevel1 + 44, L"xyö,qbpwmz");
@@ -180,10 +191,14 @@ void initLayout()
 
 	// map letters of level 2
 	TCHAR * charsLevel2;
-	if (strcmp(layout, "kou") == 0)
-		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ!–";
+	if (strcmp(layout, "neo_qwertz") == 0)
+		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ?:;_";
+	else if (strcmp(layout, "neo_qwerty") == 0)
+		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZ\":{+><?";
+	else if (strcmp(layout, "kou") == 0)
+		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ!– ";
 	else
-		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ•–";
+		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ•– ";
 	mapLevels_2_5_6(mappingTableLevel2, charsLevel2);
 
 	if (supportLevels5and6) {
@@ -923,6 +938,8 @@ int main(int argc, char *argv[])
 		char *param, *value;
 		for (int i=1; i< argc; i++) {
 			if (strcmp(argv[i], "neo") == 0
+				|| strcmp(argv[i], "neo_qwerty") == 0
+				|| strcmp(argv[i], "neo_qwertz") == 0
 				|| strcmp(argv[i], "adnw") == 0
 				|| strcmp(argv[i], "adnwzjf") == 0
 				|| strcmp(argv[i], "bone") == 0
