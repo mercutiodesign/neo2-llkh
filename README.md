@@ -72,9 +72,16 @@ Das Einrasten von Ebene 4 (beide Mod4-Tasten \[`<>` + `AltGr`\] gleichzeitig) wi
 Wenn Level2- und Level4-Lock aktiv sind, wirkt nur der Level4-Lock.
 
 ### Symmetrische Level3-Modifier
-Wenn du den rechten Modifier auf die `Ä`- statt auf die `#`-Taste legen willst, setze den Wert von `symmetricalLevel3Modifiers` auf `1`:
+Wenn du den rechten Ebene3-Modifier auf die `Ä`- statt auf die `#`-Taste legen willst, setze den Wert von `symmetricalLevel3Modifiers` auf `1`:
 
 `symmetricalLevel3Modifiers=1`
+
+### Return-Taste als rechten Level3-Modifier verwenden
+Bei US-Tastaturen fehlt in der mittleren Reihe die #-Taste. Wenn du den rechten Ebene3-Modifier auf die Return-Taste legen willst, setze den Wert von `returnKeyAsMod3R` auf `1`:
+
+`returnKeyAsMod3R=1`
+
+Diese Einstellung kann gut mit `mod3RAsReturn` kombiniert werden.
 
 ### QWERTZ-Layout für Shortcuts
 Außerdem gibt es einen Modus, in dem bei Shortcuts immer das QWERTZ-Layout gilt. Das heißt, immer wenn Strg, die linke Alt-Taste oder eine Windows-Taste gedrückt ist, wird unabhängig vom eingestellten Layout QWERTZ verwendet. Somit können Strg-c, Strg-v, Strg-s usw. einfach mit der linken Hand betätigt werden. Um diesen Modus zu aktivieren, muss `qwertzForShortcuts` in der `settings.ini` auf `1` gesetzt werden:
@@ -105,6 +112,11 @@ Achtung: Experimentell! Nicht alle Tasten funktionieren, obwohl ihnen Symbole zu
 Für vim-Freunde: Wenn die CapsLock-Taste einzeln angeschlagen wird, sendet sie ein Escape. In Kombination mit anderen Tasten ist sie der linke Ebene3-Modifier.
 
 `capsLockAsEscape=1`
+
+### Rechten Level3-Modifier als Return verwenden
+Wenn die rechte Ebene3-Modifier-Taste einzeln angeschlagen wird, sendet sie ein Return. In Kombination mit anderen Tasten ist sie der rechte Ebene3-Modifier.
+
+`mod3RAsReturn=1`
 
 ### Einstellungen als Parameter
 
