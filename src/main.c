@@ -154,12 +154,19 @@ void initLayout()
 		wcscpy(mappingTableLevel1 + 30, L"haeiudtrnsf");
 		wcscpy(mappingTableLevel1 + 44, L"xqäüöbpwmj");
 
-	} else if (strcmp(layout, "kou") == 0) {
-		wcscpy(mappingTableLevel1 + 16, L"k.ouäqgclfj´");
-		wcscpy(mappingTableLevel1 + 30, L"haeiybtrnsß");
-		wcscpy(mappingTableLevel1 + 44, L"zx,üöpdwmv");
+	} else if (strcmp(layout, "kou") == 0
+				|| strcmp(layout, "vou") == 0) {
+		if (strcmp(layout, "kou") == 0) {
+			wcscpy(mappingTableLevel1 + 16, L"k.ouäqgclfj´");
+			wcscpy(mappingTableLevel1 + 30, L"haeiybtrnsß");
+			wcscpy(mappingTableLevel1 + 44, L"zx,üöpdwmv");
+		} else {  // vou
+			wcscpy(mappingTableLevel1 + 16, L"v.ouäqglhfj´");
+			wcscpy(mappingTableLevel1 + 30, L"caeiybtrnsß");
+			wcscpy(mappingTableLevel1 + 44, L"zx,üöpdwmk");
+		}
 
-		wcscpy(mappingTableLevel3 + 16, L"@%{}^•<>=&€̷");
+		wcscpy(mappingTableLevel3 + 16, L"@%{}^!<>=&€̷");
 		wcscpy(mappingTableLevel3 + 30, L"|`()*?/:-_→");
 		wcscpy(mappingTableLevel3 + 44, L"#[]~$+\"'\\;");
 
@@ -180,10 +187,7 @@ void initLayout()
 
 	// map letters of level 2
 	TCHAR * charsLevel2;
-	if (strcmp(layout, "kou") == 0)
-		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ!–";
-	else
-		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ•–";
+	charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ•–";
 	mapLevels_2_5_6(mappingTableLevel2, charsLevel2);
 
 	if (supportLevels5and6) {
@@ -338,14 +342,14 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 			sendChar(L'̷', keyInfo);  // bar (diakritischer Schrägstrich)
 			return true;
 		case 31:
-			if (strcmp(layout, "kou") == 0) {
+			if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
 				sendChar(L'`', keyInfo);
 				keybd_event(VK_SPACE, 0, 0, 0);
 				return true;
 			}
 			return false;
 		case 48:
-			if (strcmp(layout, "kou") != 0) {
+			if (strcmp(layout, "kou") != 0 && strcmp(layout, "vou") != 0) {
 				sendChar(L'`', keyInfo);
 				keybd_event(VK_SPACE, 0, 0, 0);
 				return true;
@@ -379,7 +383,7 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		mappingTable[i] = 0;
 
 	mappingTable[16] = VK_PRIOR;
-	if (strcmp(layout, "kou") == 0) {
+	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
 		mappingTable[17] = VK_NEXT;
 		mappingTable[18] = VK_UP;
 		mappingTable[19] = VK_BACK;
@@ -395,7 +399,7 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	mappingTable[32] = VK_DOWN;
 	mappingTable[33] = VK_RIGHT;
 	mappingTable[34] = VK_END;
-	if (strcmp(layout, "kou") == 0) {
+	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
 		mappingTable[44] = VK_INSERT;
 		mappingTable[45] = VK_TAB;
 		mappingTable[46] = VK_RETURN;
@@ -927,7 +931,8 @@ int main(int argc, char *argv[])
 				|| strcmp(argv[i], "adnwzjf") == 0
 				|| strcmp(argv[i], "bone") == 0
 				|| strcmp(argv[i], "koy") == 0
-				|| strcmp(argv[i], "kou") == 0) {
+				|| strcmp(argv[i], "kou") == 0
+				|| strcmp(argv[i], "vou") == 0) {
 				strncpy(layout, argv[i], 100);
 				printf("\n Layout: %s", layout);
 
