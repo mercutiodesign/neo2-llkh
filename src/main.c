@@ -166,7 +166,7 @@ void initLayout()
 			wcscpy(mappingTableLevel1 + 44, L"zx,üöpdwmk");
 		}
 
-		wcscpy(mappingTableLevel3 + 16, L"@%{}^•<>=&€̷");
+		wcscpy(mappingTableLevel3 + 16, L"@%{}^!<>=&€̷");
 		wcscpy(mappingTableLevel3 + 30, L"|`()*?/:-_→");
 		wcscpy(mappingTableLevel3 + 44, L"#[]~$+\"'\\;");
 
@@ -187,10 +187,7 @@ void initLayout()
 
 	// map letters of level 2
 	TCHAR * charsLevel2;
-	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0)
-		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ!–";
-	else
-		charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ•–";
+	charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ•–";
 	mapLevels_2_5_6(mappingTableLevel2, charsLevel2);
 
 	if (supportLevels5and6) {

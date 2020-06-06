@@ -10,7 +10,7 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 * [AdNWzjßf](http://adnw.de/index.php?n=Main.AdNWzj%c3%9ff)
 * [bone](https://web.archive.org/web/20180721192908/http://wiki.neo-layout.org/wiki/Bone)
 * [KOY](http://adnw.de/index.php?n=Main.SeitlicheNachbaranschl%c3%a4ge)
-* [KOU](https://maximilian-schillinger.de/kou-layout.html) (mein persönliches Layout auf Basis von KOY)
+* [VOU](https://maximilian-schillinger.de/vou-layout.html) (mein persönliches Layout auf Basis von KOY)
 
 
 ## Funktionsumfang
