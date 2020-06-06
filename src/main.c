@@ -23,7 +23,7 @@ HHOOK keyhook = NULL;
  */
 char layout[100];                    // keyboard layout (default: neo)
 bool quoteAsMod3R = false;           // use quote/ä as right level 3 modifier
-int scanCodeMod3R = 43;              // this scan code depends on quoteAsMod3R
+DWORD scanCodeMod3R = 43;            // this scan code depends on quoteAsMod3R
 bool capsLockEnabled = false;        // enable (allow) caps lock
 bool shiftLockEnabled = false;       // enable (allow) shift lock (disabled if capsLockEnabled is true)
 bool level4LockEnabled = false;      // enable (allow) level 4 lock (toggle by pressing both Mod4 keys at the same time)
@@ -788,6 +788,12 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			}
 		}
 	}
+	/* Passes the hook information to the next hook procedure in the current hook chain.
+	 * 1st Parameter hhk - Optional
+	 * 2nd Parameter nCode - The next hook procedure uses this code to determine how to process the hook information.
+	 * 3rd Parameter wParam - The wParam value passed to the current hook procedure.
+	 * 4th Parameter lParam - The lParam value passed to the current hook procedure
+	 */
 	return CallNextHookEx(NULL, code, wparam, lparam);
 }
 
@@ -801,14 +807,29 @@ DWORD WINAPI hookThreadMain(void *user)
 			return 1;
 		}
 	}
-
+	/* Installs an application-defined hook procedure into a hook chain
+	 * 1st Parameter idHook: WH_KEYBOARD_LL - The type of hook procedure to be installed.
+	 * Installs a hook procedure that monitors low-level keyboard input events.
+	 * 2nd Parameter lpfn: LowLevelKeyboardProc - A pointer to the hook procedure.
+	 * 3rd Parameter hMod: hExe - A handle to the DLL containing the hook procedure pointed to by the lpfn parameter.
+	 * 4th Parameter dwThreadId: 0 - the hook procedure is associated with all existing threads running.
+	 * If the function succeeds, the return value is the handle to the hook procedure.
+	 * If the function fails, the return value is NULL.
+	 */
 	keyhook = SetWindowsHookEx(WH_KEYBOARD_LL, keyevent, base, 0);
 
+	/* Message loop retrieves messages from the thread's message queue and dispatches them to the appropriate window procedures.
+	 * For more info http://msdn.microsoft.com/en-us/library/ms644928%28v=VS.85%29.aspx#creating_loop
+	 * Retrieves a message from the calling thread's message queue.
+	 */
 	while (GetMessage(&msg, 0, 0, 0) > 0) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
 
+	/* To free system resources associated with the hook and removes a hook procedure installed in a hook chain
+	 * Parameter hhk: hKeyHook - A handle to the hook to be removed.
+	 */
 	UnhookWindowsHookEx(keyhook);
 
 	return 0;
@@ -1013,16 +1034,32 @@ int main(int argc, char *argv[])
 
 	DWORD tid;
 
+	/* Retrieves a module handle for the specified module.
+	 * parameter is NULL, GetModuleHandle returns a handle to the file used to create the calling process (.exe file).
+	 * If the function succeeds, the return value is a handle to the specified module.
+	 * If the function fails, the return value is NULL.
+	 */
 	HINSTANCE hInstance = GetModuleHandle(NULL);
 	trayicon_init(LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON)), APPNAME);
 	trayicon_add_item(NULL, &toggleBypassMode);
 	trayicon_add_item("Exit", &exitApplication);
 
+	/* CreateThread function Creates a thread to execute within the virtual address space of the calling process.
+	 * 1st Parameter lpThreadAttributes:  NULL - Thread gets a default security descriptor.
+	 * 2nd Parameter dwStackSize:  0  - The new thread uses the default size for the executable.
+	 * 3rd Parameter lpStartAddress:  KeyLogger - A pointer to the application-defined function to be executed by the thread
+	 * 4th Parameter lpParameter:  argv[0] -  A pointer to a variable to be passed to the thread
+	 * 5th Parameter dwCreationFlags: 0 - The thread runs immediately after creation.
+	 * 6th Parameter pThreadId(out parameter): NULL - the thread identifier is not returned
+	 * If the function succeeds, the return value is a handle to the new thread.
+	 */
 	HANDLE thread = CreateThread(0, 0, hookThreadMain, argv[0], 0, &tid);
 
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0) > 0) {
+		// Translates virtual-key messages into character messages.
 		TranslateMessage(&msg);
+		// Dispatches a message to a window procedure.
 		DispatchMessage(&msg);
 	}
 	return 0;
