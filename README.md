@@ -83,6 +83,13 @@ Bei US-Tastaturen fehlt in der mittleren Reihe die #-Taste. Wenn du den rechten 
 
 Diese Einstellung kann gut mit `mod3RAsReturn` kombiniert werden.
 
+### Tab-Taste als linken Level4-Modifier verwenden
+Bei US-Tastaturen fehlt die <-Taste (unten links). Wenn du den linken Ebene4-Modifier auf die Tab-Taste legen willst, setze den Wert von `tabKeyAsMod4L` auf `1`:
+
+`tabKeyAsMod4L=1`
+
+Diese Einstellung kann gut mit `mod4LAsTab` kombiniert werden.
+
 ### QWERTZ-Layout für Shortcuts
 Außerdem gibt es einen Modus, in dem bei Shortcuts immer das QWERTZ-Layout gilt. Das heißt, immer wenn Strg, die linke Alt-Taste oder eine Windows-Taste gedrückt ist, wird unabhängig vom eingestellten Layout QWERTZ verwendet. Somit können Strg-c, Strg-v, Strg-s usw. einfach mit der linken Hand betätigt werden. Um diesen Modus zu aktivieren, muss `qwertzForShortcuts` in der `settings.ini` auf `1` gesetzt werden:
 
@@ -117,6 +124,11 @@ Für vim-Freunde: Wenn die CapsLock-Taste einzeln angeschlagen wird, sendet sie 
 Wenn die rechte Ebene3-Modifier-Taste einzeln angeschlagen wird, sendet sie ein Return. In Kombination mit anderen Tasten ist sie der rechte Ebene3-Modifier.
 
 `mod3RAsReturn=1`
+
+### Linken Level4-Modifier als Tab verwenden
+Wenn die linke Ebene4-Modifier-Taste einzeln angeschlagen wird, sendet sie ein Tab. In Kombination mit anderen Tasten ist sie der linke Ebene4-Modifier.
+
+`mod4LAsTab=1`
 
 ### Einstellungen als Parameter
 
