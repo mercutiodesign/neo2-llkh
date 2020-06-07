@@ -31,9 +31,10 @@ HHOOK keyhook = NULL;
 char layout[100];                    // keyboard layout (default: neo)
 bool quoteAsMod3R = false;           // use quote/ä as right level 3 modifier
 bool returnAsMod3R = false;          // use return as right level 3 modifier
+bool tabAsMod4L = false;             // use tab as left level 4 modifier
 DWORD scanCodeMod3L = SCANCODE_CAPSLOCK_KEY;
 DWORD scanCodeMod3R = SCANCODE_HASH_KEY;       // depends on quoteAsMod3R and returnAsMod3R
-DWORD scanCodeMod4L = SCANCODE_LOWER_THAN_KEY;
+DWORD scanCodeMod4L = SCANCODE_LOWER_THAN_KEY; // depends on tabAsMod4L
 DWORD scanCodeMod4R = SCANCODE_RIGHT_ALT_KEY;
 bool capsLockEnabled = false;        // enable (allow) caps lock
 bool shiftLockEnabled = false;       // enable (allow) shift lock (disabled if capsLockEnabled is true)
@@ -44,6 +45,7 @@ bool swapLeftCtrlLeftAltAndLeftWin = false;  // swap left Ctrl, left Alt key and
 bool supportLevels5and6 = false;     // support levels five and six (greek letters and mathematical symbols)
 bool capsLockAsEscape = false;       // if true, hitting CapsLock alone sends Esc
 bool mod3RAsReturn = false;          // if true, hitting Mod3R alone sends Return
+bool mod4LAsTab = false;             // if true, hitting Mod4L alone sends Tab
 
 /**
  * True if no mapping should be done
@@ -63,6 +65,7 @@ bool level3modLeftPressed = false;
 bool level3modRightPressed = false;
 bool level3modLeftAndNoOtherKeyPressed = false;
 bool level3modRightAndNoOtherKeyPressed = false;
+bool level4modLeftAndNoOtherKeyPressed = false;
 
 bool level4modLeftPressed = false;
 bool level4modRightPressed = false;
@@ -627,7 +630,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 					level3modRightAndNoOtherKeyPressed = false;
 					return -1;
 				}
-			} else {  // VK_CAPITAL (CapsLock)
+			} else {  // scanCodeMod3L (CapsLock)
 				level3modLeftPressed = false;
 				mod3Pressed = level3modLeftPressed | level3modRightPressed;
 				if (capsLockAsEscape && level3modLeftAndNoOtherKeyPressed) {
@@ -646,6 +649,13 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 				if (level4modRightPressed && level4LockEnabled) {
 					level4LockActive = !level4LockActive;
 					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+				} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
+					// release Mod4_L
+					keybd_event(keyInfo.vkCode, 0, KEYEVENTF_KEYUP, 0);
+					// send Tab
+					keybd_event(VK_TAB, 0, 0x01, 0);
+					level4modLeftAndNoOtherKeyPressed = false;
+					return -1;
 				}
 			} else {  // scanCodeMod4R
 				level4modRightPressed = false;
@@ -701,6 +711,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 
 		level3modLeftAndNoOtherKeyPressed = false;
 		level3modRightAndNoOtherKeyPressed = false;
+		level4modLeftAndNoOtherKeyPressed = false;
 
 		// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
 		if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
@@ -779,6 +790,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		} else if (isMod4(keyInfo)) {
 			if (keyInfo.scanCode == scanCodeMod4L) {
 				level4modLeftPressed = true;
+				if (mod4LAsTab)
+					level4modLeftAndNoOtherKeyPressed = true;
 			} else { // scanCodeMod4R
 				level4modRightPressed = true;
 				/* ALTGR triggers two keys: LCONTROL and RMENU
@@ -919,6 +932,9 @@ int main(int argc, char *argv[])
 		GetPrivateProfileStringA("Settings", "returnKeyAsMod3R", "0", returnValue, 100, ini);
 		returnAsMod3R = (strcmp(returnValue, "1") == 0);
 
+		GetPrivateProfileStringA("Settings", "tabKeyAsMod4L", "0", returnValue, 100, ini);
+		tabAsMod4L = (strcmp(returnValue, "1") == 0);
+
 		GetPrivateProfileStringA("Settings", "capsLockEnabled", "0", returnValue, 100, ini);
 		capsLockEnabled = (strcmp(returnValue, "1") == 0);
 
@@ -946,6 +962,9 @@ int main(int argc, char *argv[])
 		GetPrivateProfileStringA("Settings", "mod3RAsReturn", "0", returnValue, 100, ini);
 		mod3RAsReturn = (strcmp(returnValue, "1") == 0);
 
+		GetPrivateProfileStringA("Settings", "mod4LAsTab", "0", returnValue, 100, ini);
+		mod4LAsTab = (strcmp(returnValue, "1") == 0);
+
 		if (capsLockEnabled)
 			shiftLockEnabled = false;
 
@@ -956,6 +975,7 @@ int main(int argc, char *argv[])
 		printf(" Layout: %s\n", layout);
 		printf(" symmetricalLevel3Modifiers: %d\n", quoteAsMod3R);
 		printf(" returnKeyAsMod3R: %d\n", returnAsMod3R);
+		printf(" tabKeyAsMod4L: %d\n", tabAsMod4L);
 		printf(" capsLockEnabled: %d\n", capsLockEnabled);
 		printf(" shiftLockEnabled: %d\n", shiftLockEnabled);
 		printf(" level4LockEnabled: %d\n", level4LockEnabled);
@@ -965,6 +985,7 @@ int main(int argc, char *argv[])
 		printf(" supportLevels5and6: %d\n", supportLevels5and6);
 		printf(" capsLockAsEscape: %d\n\n", capsLockAsEscape);
 		printf(" mod3RAsReturn: %d\n\n", mod3RAsReturn);
+		printf(" mod4LAsTab: %d\n\n", mod4LAsTab);
 
 		//if (argc >= 2)
 		//	printf("Kommandozeilenparameter werden ignoriert, da eine settings.ini gefunden wurde!\n\n");
@@ -1013,6 +1034,10 @@ int main(int argc, char *argv[])
 					returnAsMod3R = value==NULL ? false : (strcmp(value, "1") == 0);
 					printf("\n returnKeyAsMod3R: %d", returnAsMod3R);
 
+				} else if (strcmp(param, "tabKeyAsMod4L") == 0) {
+					tabAsMod4L = value==NULL ? false : (strcmp(value, "1") == 0);
+					printf("\n tabKeyAsMod4L: %d", tabAsMod4L);
+
 				} else if (strcmp(param, "capsLockEnabled") == 0) {
 					capsLockEnabled = value==NULL ? false : (strcmp(value, "1") == 0);
 					printf("\n capsLockEnabled: %d", capsLockEnabled);
@@ -1049,6 +1074,10 @@ int main(int argc, char *argv[])
 					mod3RAsReturn = value==NULL ? false : (strcmp(value, "1") == 0);
 					printf("\n mod3RAsReturn: %d", mod3RAsReturn);
 
+				} else if (strcmp(param, "mod4LAsTab") == 0) {
+					mod4LAsTab = value==NULL ? false : (strcmp(value, "1") == 0);
+					printf("\n mod4LAsTab: %d", mod4LAsTab);
+
 				} else {
 					printf("\nUnbekannter Parameter:%s", param);
 				}
@@ -1060,12 +1089,17 @@ int main(int argc, char *argv[])
 	printf("\n\n");
 
 	if (quoteAsMod3R)
-		// ä/quote key instead of #/backslash key as right level 3 modifier
+		// use ä/quote key instead of #/backslash key as right level 3 modifier
 		scanCodeMod3R = SCANCODE_QUOTE_KEY;
 	else if (returnAsMod3R)
 		// use return key instead of #/backslash as right level 3 modifier
 		// (might be useful for US keyboards because the # key is missing there)
 		scanCodeMod3R = SCANCODE_RETURN_KEY;
+
+	if (tabAsMod4L)
+		// use tab key instead of < key as left level 4 modifier
+		// (might be useful for US keyboards because the < key is missing there)
+		scanCodeMod4L = SCANCODE_TAB_KEY;
 
 	if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin)
 		// catch ctrl-c because it will send keydown for ctrl
