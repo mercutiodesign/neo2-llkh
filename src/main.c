@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include "trayicon.h"
 #include "resources.h"
+#include <io.h>
 
 HHOOK keyhook = NULL;
 #define APPNAME "neo-llkh"
@@ -29,6 +30,7 @@ HHOOK keyhook = NULL;
  * These values can be set in a configuration file (settings.ini)
  */
 char layout[100];                    // keyboard layout (default: neo)
+bool debugWindow = false;            // show debug output in a separate console window
 bool quoteAsMod3R = false;           // use quote/ä as right level 3 modifier
 bool returnAsMod3R = false;          // use return as right level 3 modifier
 bool tabAsMod4L = false;             // use tab as left level 4 modifier
@@ -88,6 +90,28 @@ TCHAR mappingTableLevel4[LEN];
 TCHAR mappingTableLevel5[LEN];
 TCHAR mappingTableLevel6[LEN];
 
+
+void SetStdOutToNewConsole()
+{
+	// allocate a console for this app
+	AllocConsole();
+	// redirect unbuffered STDOUT to the console
+	HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+	int fileDescriptor = _open_osfhandle((intptr_t)consoleHandle, _A_SYSTEM);
+	FILE *fp = _fdopen(fileDescriptor, "w");
+	*stdout = *fp;
+	setvbuf(stdout, NULL, _IONBF, 0);
+	// give the console window a nicer title
+	SetConsoleTitle(L"neo-llkh Debug Output");
+	// give the console window a bigger buffer size
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	if (GetConsoleScreenBufferInfo(consoleHandle, &csbi)) {
+		COORD bufferSize;
+		bufferSize.X = csbi.dwSize.X;
+		bufferSize.Y = 9999;
+		SetConsoleScreenBufferSize(consoleHandle, bufferSize);
+	}
+}
 
 BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 {
@@ -965,11 +989,18 @@ int main(int argc, char *argv[])
 		GetPrivateProfileStringA("Settings", "mod4LAsTab", "0", returnValue, 100, ini);
 		mod4LAsTab = (strcmp(returnValue, "1") == 0);
 
+		GetPrivateProfileStringA("Settings", "debugWindow", "0", returnValue, 100, ini);
+		debugWindow = (strcmp(returnValue, "1") == 0);
+
 		if (capsLockEnabled)
 			shiftLockEnabled = false;
 
 		if (swapLeftCtrlLeftAltAndLeftWin)
 			swapLeftCtrlAndLeftAlt = false;
+
+		if (debugWindow)
+			// Open Console Window to see printf output
+			SetStdOutToNewConsole();
 
 		printf("\nEinstellungen aus %s:\n", ini);
 		printf(" Layout: %s\n", layout);
@@ -983,12 +1014,10 @@ int main(int argc, char *argv[])
 		printf(" swapLeftCtrlAndLeftAlt: %d\n", swapLeftCtrlAndLeftAlt);
 		printf(" swapLeftCtrlLeftAltAndLeftWin: %d\n", swapLeftCtrlLeftAltAndLeftWin);
 		printf(" supportLevels5and6: %d\n", supportLevels5and6);
-		printf(" capsLockAsEscape: %d\n\n", capsLockAsEscape);
-		printf(" mod3RAsReturn: %d\n\n", mod3RAsReturn);
-		printf(" mod4LAsTab: %d\n\n", mod4LAsTab);
-
-		//if (argc >= 2)
-		//	printf("Kommandozeilenparameter werden ignoriert, da eine settings.ini gefunden wurde!\n\n");
+		printf(" capsLockAsEscape: %d\n", capsLockAsEscape);
+		printf(" mod3RAsReturn: %d\n", mod3RAsReturn);
+		printf(" mod4LAsTab: %d\n", mod4LAsTab);
+		printf(" debugWindow: %d\n\n", debugWindow);
 
 	} else {
 		printf("\nKeine settings.ini gefunden: %s\n\n", ini);
@@ -1020,7 +1049,15 @@ int main(int argc, char *argv[])
 					}
 				}
 
-				if (strcmp(param, "layout") == 0) {
+				if (strcmp(param, "debugWindow") == 0) {
+					bool debugWindowAlreadyStarted = debugWindow;
+					debugWindow = value==NULL ? false : (strcmp(value, "1") == 0);
+					if (debugWindow && !debugWindowAlreadyStarted)
+						// Open Console Window to see printf output
+						SetStdOutToNewConsole();
+					printf("\n debugWindow: %d", debugWindow);
+
+				} else if (strcmp(param, "layout") == 0) {
 					if (value != NULL) {
 						strncpy(layout, value, 100);
 						printf("\n Layout: %s", layout);
