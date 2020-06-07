@@ -23,7 +23,7 @@ HHOOK keyhook = NULL;
 #define SCANCODE_QUOTE_KEY 40      // Ä
 #define SCANCODE_HASH_KEY 43       // #
 #define SCANCODE_RETURN_KEY 28
-#define SCANCODE_RIGHT_ALT_KEY 56  // AltGr
+// #define SCANCODE_ANY_ALT_KEY 56        // Alt or AltGr
 
 /**
  * Some global settings.
@@ -37,7 +37,7 @@ bool tabAsMod4L = false;             // use tab as left level 4 modifier
 DWORD scanCodeMod3L = SCANCODE_CAPSLOCK_KEY;
 DWORD scanCodeMod3R = SCANCODE_HASH_KEY;       // depends on quoteAsMod3R and returnAsMod3R
 DWORD scanCodeMod4L = SCANCODE_LOWER_THAN_KEY; // depends on tabAsMod4L
-DWORD scanCodeMod4R = SCANCODE_RIGHT_ALT_KEY;
+// DWORD scanCodeMod4R = SCANCODE_ANY_ALT_KEY;
 bool capsLockEnabled = false;        // enable (allow) caps lock
 bool shiftLockEnabled = false;       // enable (allow) shift lock (disabled if capsLockEnabled is true)
 bool level4LockEnabled = false;      // enable (allow) level 4 lock (toggle by pressing both Mod4 keys at the same time)
@@ -495,7 +495,7 @@ bool isMod3(KBDLLHOOKSTRUCT keyInfo)
 bool isMod4(KBDLLHOOKSTRUCT keyInfo)
 {
 	return keyInfo.scanCode == scanCodeMod4L
-	    || keyInfo.scanCode == scanCodeMod4R;
+	    || keyInfo.vkCode == VK_RMENU;
 }
 
 bool isSystemKeyPressed()
@@ -569,6 +569,9 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 			break;
 		case VK_RETURN:
 			keyName = "(Return)";
+			break;
+		case 0x41 ... 0x5A:
+			keyName = "(A-Z)";
 			break;
 		default:
 			keyName = "";
