@@ -35,7 +35,8 @@ HHOOK keyhook = NULL;
  * Some global settings.
  * These values can be set in a configuration file (settings.ini)
  */
-char layout[100];                    // keyboard layout (default: neo)
+char layout[100];                    // keyboard layout by name (default: neo)
+TCHAR customLayout[32];              // custom keyboard layout (32 symbols)
 bool debugWindow = false;            // show debug output in a separate console window
 bool quoteAsMod3R = false;           // use quote/ä as right level 3 modifier
 bool returnAsMod3R = false;          // use return as right level 3 modifier
@@ -247,7 +248,19 @@ void initLayout()
 	wcscpy(mappingTableLevel4 + 69, L"≠");  // num-lock-key
 
 	// layout dependent
-	if (strcmp(layout, "adnw") == 0) {
+	if (wcslen(customLayout) >= 10) {
+		if (wcslen(customLayout) >= 16) {
+			// custom layout
+			wcsncpy(mappingTableLevel1 + 16, customLayout, 11);
+			wcscpy(mappingTableLevel1 + 27, L"´");
+			wcsncpy(mappingTableLevel1 + 30, customLayout + 11, 11);
+			wcsncpy(mappingTableLevel1 + 44, customLayout + 22, 10);
+			printf("mappingTableLevel1: %S", mappingTableLevel1);
+		} else {
+			printf("wcslen(customLayout) = %i\n", wcslen(customLayout));
+		}
+
+	} else if (strcmp(layout, "adnw") == 0) {
 		wcscpy(mappingTableLevel1 + 16, L"kuü.ävgcljf´");
 		wcscpy(mappingTableLevel1 + 30, L"hieaodtrnsß");
 		wcscpy(mappingTableLevel1 + 44, L"xyö,qbpwmz");
@@ -1156,6 +1169,12 @@ int main(int argc, char *argv[])
 					if (value != NULL) {
 						strncpy(layout, value, 100);
 						printf("\n Layout: %s", layout);
+					}
+
+				} else if (strcmp(param, "customLayout") == 0) {
+					if (value != NULL) {
+						wcsncpy(customLayout, value, 32);
+						printf("\n Custom layout: %S", customLayout);
 					}
 
 				} else if (strcmp(param, "symmetricalLevel3Modifiers") == 0) {
