@@ -19,11 +19,14 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 * Level2-Lock: Ebene 2 kann eingerastet werden (beide Shift-Tasten gleichzeitig)
 * Echtes CapsLock: Alle Buchstaben groß schreiben. Zahlen, Punkt und Komma bleiben unverändert. (Beide Shift-Tasten gleichzeitig)
 * Level4-Lock: Ebene 4 kann eingerastet werden (beide Mod4-Tasten gleichzeitig)
-* Der rechte Ebene3-Modifier kann auf die ä-Taste gelegt werden
+* Der rechte Ebene3-Modifier kann statt auf die ö- auf die ä- oder Enter-Taste gelegt werden
+* Die linke Ebene4-Modifier kann auf die Tabulator-Taste gelegt werden
 * Wenn gewünscht, gilt für Shortcuts (mit Strg, Alt und/oder Win) das QWERTZ-Layout
 * Die linke Strg- und Alt-Taste können getauscht werden
 * Alternativ können die linke Strg-, Alt- und Windows-Taste getauscht werden
 * Die CapsLock-Taste kann in eine zusätzliche Escape-Taste verwandelt werden (wenn sie alleine angeschlagen wird)
+* Der rechte Ebene3-Modifier kann in eine zusätzliche Enter-Taste verwandelt werden (wenn er alleine angeschlagen wird)
+* Der linke Ebene4-Modifier kann in eine zusätzliche Tab-Taste verwandelt werden (wenn er alleine angeschlagen wird)
 
 ### Was nicht funktioniert
 
@@ -52,7 +55,7 @@ Wenn du ein anderers Layout verwenden möchtest, ändere den `layout`-Eintrag in
 
 `layout=adnw`
 
-Folgende Layout-Parameter werden erkannt: `neo`, `adnw`, `adnwzjf` (=AdNWzjßf), `bone`, `koy`, `kou`.
+Folgende Layout-Parameter werden erkannt: `neo`, `adnw`, `adnwzjf` (=AdNWzjßf), `bone`, `koy`, `kou`, `vou`.
 
 ### Einrasten von Ebene 2
 Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktiviert werden. Dafür muss der Wert von `shiftLockEnabled` in der `settings.ini` auf `1` gesetzt werden:

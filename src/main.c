@@ -836,6 +836,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			return -1;
 		} else if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) {
 			// Numeric keypad -> don't remap
+		} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
+			// numbers 0 to 9 -> don't remap
 		} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
 			TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
 			if (capsLockActive && (level == 1 || level == 2) && isLetter(key))
