@@ -42,7 +42,7 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 Um diesen Treiber aus den Quellen zu installieren, klone dieses Projekt (`git clone https://github.com/MaxGyver83/neo2-llkh.git`) oder lade es als zip herunter und entpacke es. Führe dann `make` im `src`-Ordner aus. Dafür müssen make und gcc installiert sein. Wenn du diese Programme noch nicht hast, könntest du z.B. [MinGW](https://sourceforge.net/projects/mingw/) installieren.
 
 ## Verwendung
-Starte einfach die selbst kompilierte `neo-llkh.exe` aus dem `src`-Ordner. Möglicherweise funktioniert auch die mitgelieferte `neo-llkh.exe` aus dem `bin`-Ordner (kompiliert unter Windows 10). Standardmäßig wird das Neo2-Layout geladen.
+Starte einfach die selbst kompilierte `neo-llkh.exe` aus dem `src`-Ordner oder lade `neo-llkh.exe` und `settings.ini` von https://github.com/MaxGyver83/neo2-llkh/releases runter. Standardmäßig wird das Neo2-Layout geladen.
 
 Über das Icon (![appicon](src/appicon.ico)) in der Taskleiste kannst du den Treiber wieder beenden.
 
