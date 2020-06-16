@@ -12,7 +12,6 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 * [KOY](http://adnw.de/index.php?n=Main.SeitlicheNachbaranschl%c3%a4ge)
 * [VOU](https://maximilian-schillinger.de/vou-layout.html) (mein persönliches Layout auf Basis von KOY)
 
-
 ## Funktionsumfang
 * Alle 6 Ebenen (auf den Ebenen 5 und 6 funktionieren nicht alle Zeichen)
 * Die meisten toten Tasten werden unterstützt: ``^ ` ´ ̧ ̌ ~ ° ̇  `` (teilweise muss die tote Taste vor, teilweise nach dem Buchstaben gedrückt werden)
@@ -35,7 +34,7 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 
 ### Bekannte Fehler
 
-* Ein Benutzer hat berichtet, dass es ab und zu passiert, dass die Strg-Taste "virtuell" zu klemmen scheint. Wenn das passiert, kann jede weitere Eingabe eine Tastenkombination mit Strg auslösen. **Vorsicht: Hier besteht die Gefahr eines Datenverlustes** (wenn z.B. ein ungespeichertes Dokument ungewollt geschlossen wird). Leider konnte ich noch nicht herausfinden, wie es dazu kommen kann. Ich bin für jeden Hinweis dankbar.
+* ~~Ein Benutzer hat berichtet, dass es ab und zu passiert, dass die Strg-Taste "virtuell" zu klemmen scheint. Wenn das passiert, kann jede weitere Eingabe eine Tastenkombination mit Strg auslösen. Vorsicht: Hier besteht die Gefahr eines Datenverlustes (wenn z.B. ein ungespeichertes Dokument ungewollt geschlossen wird).~~ Dieser Fehler kann mit Commit [aca671f183](https://github.com/MaxGyver83/neo2-llkh/tree/aca671f1830ebe1f9e74b82c6d0cba77067daa61) vom 8.10.2019 reproduziert werden. Er tritt in der aktuellen Version jedoch nicht mehr auf.
 * Eine Benutzerin hat berichtet, dass die Scollfunktion ihres Touchpads ausfällt, wenn sie Enter (AltGr+V) oder Escape (AltGr+Y) auf Ebene 4 im Neo-Layout betätigt.
 
 ## Selbst kompilieren
