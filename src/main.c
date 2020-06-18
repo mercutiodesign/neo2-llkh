@@ -517,6 +517,7 @@ bool isLetter(TCHAR key)
 
 void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 {
+	char vkCodeLetter[4] = {'(', keyInfo.vkCode, ')', 0};
 	char *keyName;
 	switch (keyInfo.vkCode) {
 		case VK_LSHIFT:
@@ -571,7 +572,7 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 			keyName = "(Return)";
 			break;
 		case 0x41 ... 0x5A:
-			keyName = "(A-Z)";
+			keyName = vkCodeLetter;
 			break;
 		default:
 			keyName = "";
@@ -580,8 +581,9 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 	char *shiftLockCapsLockInfo = shiftLockActive ? " [shift lock active]"
 	                              : (capsLockActive ? " [caps lock active]" : "");
 	char *level4LockInfo = level4LockActive ? " [level4 lock active]" : "";
-	printf("%-10s sc %u vk 0x%x 0x%x %d %s%s%s\n", desc, keyInfo.scanCode, keyInfo.vkCode,
-	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockCapsLockInfo, level4LockInfo);
+	char *vkPacket = (desc=="injected" && keyInfo.vkCode == VK_PACKET) ? " (VK_PACKET)" : "";
+	printf("%-10s sc %u vk 0x%x 0x%x %d %s%s%s%s\n", desc, keyInfo.scanCode, keyInfo.vkCode,
+	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockCapsLockInfo, level4LockInfo, vkPacket);
 }
 
 __declspec(dllexport)
@@ -734,7 +736,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	}
 
 	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
-		logKeyEvent("\nkey down", keyInfo);
+        printf("\n");
+		logKeyEvent("key down", keyInfo);
 
 		level3modLeftAndNoOtherKeyPressed = false;
 		level3modRightAndNoOtherKeyPressed = false;
