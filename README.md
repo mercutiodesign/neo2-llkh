@@ -11,6 +11,7 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 * [bone](https://web.archive.org/web/20180721192908/http://wiki.neo-layout.org/wiki/Bone)
 * [KOY](http://adnw.de/index.php?n=Main.SeitlicheNachbaranschl%c3%a4ge)
 * [VOU](https://maximilian-schillinger.de/vou-layout.html) (mein persönliches Layout auf Basis von KOY)
+* [QWERTZ](https://de.wikipedia.org/wiki/QWERTZ-Tastaturbelegung)
 
 ## Funktionsumfang
 * Alle 6 Ebenen (auf den Ebenen 5 und 6 funktionieren nicht alle Zeichen)
@@ -54,7 +55,7 @@ Wenn du ein anderers Layout verwenden möchtest, ändere den `layout`-Eintrag in
 
 `layout=adnw`
 
-Folgende Layout-Parameter werden erkannt: `neo`, `adnw`, `adnwzjf` (=AdNWzjßf), `bone`, `koy`, `kou`, `vou`.
+Folgende Layout-Parameter werden erkannt: `neo`, `adnw`, `adnwzjf` (=AdNWzjßf), `bone`, `koy`, `kou`, `vou`, `qwertz`.
 
 ### Einrasten von Ebene 2
 Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktiviert werden. Dafür muss der Wert von `shiftLockEnabled` in der `settings.ini` auf `1` gesetzt werden:
