@@ -217,6 +217,7 @@ void initLayout()
 		wcscpy(mappingTableLevel4 + 49, L"_123.");
 
 	} else if (strcmp(layout, "qwertz") == 0) {
+		wcscpy(mappingTableLevel1 + 12, L"ß");
 		wcscpy(mappingTableLevel1 + 16, L"qwertzuiopü+");
 		wcscpy(mappingTableLevel1 + 30, L"asdfghjklöä");
 		wcscpy(mappingTableLevel1 + 44, L"yxcvbnm,.-");
