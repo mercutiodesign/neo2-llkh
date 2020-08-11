@@ -4,6 +4,7 @@
  * Neo2, (www.neo-layout.org)
  * AdNW, AdNWzjßf, KOY (www.adnw.de)
  * bone (https://web.archive.org/web/20180721192908/http://wiki.neo-layout.org/wiki/Bone)
+ * qwertz (https://de.wikipedia.org/wiki/QWERTZ-Tastaturbelegung)
  */
 
 #include <windows.h>
@@ -214,6 +215,12 @@ void initLayout()
 		wcscpy(mappingTableLevel4 + 21, L":789+−˝");
 		wcscpy(mappingTableLevel4 + 35, L"-456,;");
 		wcscpy(mappingTableLevel4 + 49, L"_123.");
+
+	} else if (strcmp(layout, "qwertz") == 0) {
+		wcscpy(mappingTableLevel1 + 12, L"ß");
+		wcscpy(mappingTableLevel1 + 16, L"qwertzuiopü+");
+		wcscpy(mappingTableLevel1 + 30, L"asdfghjklöä");
+		wcscpy(mappingTableLevel1 + 44, L"yxcvbnm,.-");
 
 	} else { // neo
 		wcscpy(mappingTableLevel1 + 16, L"xvlcwkhgfqß´");
@@ -1043,7 +1050,8 @@ int main(int argc, char *argv[])
 				|| strcmp(argv[i], "bone") == 0
 				|| strcmp(argv[i], "koy") == 0
 				|| strcmp(argv[i], "kou") == 0
-				|| strcmp(argv[i], "vou") == 0) {
+				|| strcmp(argv[i], "vou") == 0
+				|| strcmp(argv[i], "qwertz") == 0) {
 				strncpy(layout, argv[i], 100);
 				printf("\n Layout: %s", layout);
 
