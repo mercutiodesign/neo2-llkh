@@ -158,21 +158,35 @@ void initLayout()
 
 	// same for all layouts
 	wcscpy(mappingTableLevel1 +  2, L"1234567890-`");
+	wcscpy(mappingTableLevel1 + 71, L"789-456+1230.");
+	mappingTableLevel1[69] = 0x0009; // tabulator (not sure about this one)
 
 	wcscpy(mappingTableLevel2 + 41, L"̌");  // key to the left of the "1" key
 	wcscpy(mappingTableLevel2 +  2, L"°§ℓ»«$€„“”—̧");
+	wcscpy(mappingTableLevel2 + 71, L"✔✘†-♣€‣+♦♥♠␣."); // numeric keypad
+	mappingTableLevel2[69] = 0x0009; // tabulator (not sure about this one)
+	// https://neo-layout.org/grafik/aufsteller/neo20-aufsteller.pdf
 
 	wcscpy(mappingTableLevel3 + 41, L"^");
 	wcscpy(mappingTableLevel3 +  2, L"¹²³›‹¢¥‚‘’—̊");
 	wcscpy(mappingTableLevel3 + 16, L"…_[]^!<>=&ſ̷");
 	wcscpy(mappingTableLevel3 + 30, L"\\/{}*?()-:@");
 	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';");
+	wcscpy(mappingTableLevel3 + 71, L"↕↑↨−←:→±↔↓⇌%,"); // numeric keypad
+	wcscpy(mappingTableLevel3 + 53, L"÷");  // /-key on numeric keypad
+	wcscpy(mappingTableLevel3 + 55, L"⋅");  // *-key on numeric keypad
+	wcscpy(mappingTableLevel3 + 69, L"=");  // num-lock-key
 
 	wcscpy(mappingTableLevel4 + 41, L"̇");
 	wcscpy(mappingTableLevel4 +  2, L"ªº№⋮·£¤0/*-¨");
 	wcscpy(mappingTableLevel4 + 21, L"¡789+−˝");
 	wcscpy(mappingTableLevel4 + 35, L"¿456,.");
 	wcscpy(mappingTableLevel4 + 49, L":123;");
+	wcscpy(mappingTableLevel4 + 53, L"∕");  // /-key on numeric keypad
+	wcscpy(mappingTableLevel4 + 55, L"×");  // *-key on numeric keypad
+	wcscpy(mappingTableLevel4 + 74, L"∖");  // --key on numeric keypad
+	wcscpy(mappingTableLevel4 + 78, L"∓");  // +-key on numeric keypad
+	wcscpy(mappingTableLevel4 + 69, L"≠");  // num-lock-key
 
 	// layout dependent
 	if (strcmp(layout, "adnw") == 0) {
@@ -249,10 +263,21 @@ void initLayout()
 		wcscpy(mappingTableLevel5 +  2, L"₁₂₃♂♀⚥ϰ⟨⟩₀?῾");
 		wcscpy(mappingTableLevel5 + 27, L"᾿");
 		mappingTableLevel5[57] = 0x00a0;  // space = no-break space
+		wcscpy(mappingTableLevel5 + 71, L"≪∩≫⊖⊂⊶⊃⊕≤∪≥‰′"); // numeric keypad
+
+		wcscpy(mappingTableLevel5 + 53, L"⌀");  // /-key on numeric keypad
+		wcscpy(mappingTableLevel5 + 55, L"⊙");  // *-key on numeric keypad
+		wcscpy(mappingTableLevel5 + 69, L"≈");  // num-lock-key
+
 		wcscpy(mappingTableLevel6 + 41, L"̣");
 		wcscpy(mappingTableLevel6 +  2, L"¬∨∧⊥∡∥→∞∝⌀?̄");
 		wcscpy(mappingTableLevel6 + 27, L"˘");
 		mappingTableLevel6[57] = 0x202f;  // space = narrow no-break space
+		wcscpy(mappingTableLevel6 + 71, L"⌈⋂⌉∸⊆⊷⊇∔⌊⋃⌋□"); // numeric keypad
+		mappingTableLevel6[83] = 0x02dd; // double acute accent (not sure about this one)
+		wcscpy(mappingTableLevel6 + 53, L"∣");  // /-key on numeric keypad
+		wcscpy(mappingTableLevel6 + 55, L"⊗");  // *-key on numeric keypad
+		wcscpy(mappingTableLevel6 + 69, L"≡");  // num-lock-key
 	}
 
 	// if quote/ä is the right level 3 modifier, copy symbol of quote/ä key to backslash/# key
@@ -459,6 +484,19 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	}
 	mappingTable[57] = '0';
 
+	// numeric keypad
+	mappingTable[71] = VK_HOME;
+	mappingTable[72] = VK_UP;
+	mappingTable[73] = VK_PRIOR;
+	mappingTable[75] = VK_LEFT;
+	mappingTable[76] = VK_ESCAPE; // not sure about this one
+	mappingTable[77] = VK_RIGHT;
+	mappingTable[79] = VK_END;
+	mappingTable[80] = VK_DOWN;
+	mappingTable[81] = VK_NEXT;
+	mappingTable[82] = VK_INSERT;
+	mappingTable[83] = VK_DELETE;
+
 	if (mappingTable[keyInfo.scanCode] != 0) {
 //		if (mappingTable[keyInfo.scanCode] == VK_RETURN)
 //			bScan = 0x1c;
@@ -614,8 +652,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	}
 
 	if (code == HC_ACTION && wparam == WM_KEYDOWN &&
-		shiftPressed && keyInfo.scanCode == 69) {
-		// Shift + Pause
+		shiftPressed && keyInfo.scanCode == 70) {
+		// Shift + ScrollLock
 		toggleBypassMode();
 		return -1;
 	}
