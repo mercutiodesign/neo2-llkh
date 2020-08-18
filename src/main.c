@@ -383,7 +383,7 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 			return true;
 		case 20:
 			sendChar(L'^', keyInfo);
-			keybd_event(VK_SPACE, 0, 0, 0);
+			keybd_event(VK_SPACE, 0x39, 0, 0);
 			return true;
 		case 27:
 			sendChar(L'̷', keyInfo);  // bar (diakritischer Schrägstrich)
@@ -478,7 +478,7 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 //			|| mappingTable[keyInfo.scanCode]==VK_INSERT
 //			|| mappingTable[keyInfo.scanCode]==VK_RETURN)
 			// always send extended flag (maybe this fixes mousepad issues)
-			keybd_event(mappingTable[keyInfo.scanCode], 0, 0x01, 0);
+		keybd_event(mappingTable[keyInfo.scanCode], 0, 0x01, 0);
 //		else
 //			keybd_event(mappingTable[keyInfo.scanCode], bScan, 0, 0);
 		return true;
@@ -613,20 +613,9 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		}
 	}
 
-	if (code == HC_ACTION && wparam == WM_KEYDOWN &&
-		shiftPressed && keyInfo.scanCode == 69) {
-		// Shift + Pause
-		toggleBypassMode();
-		return -1;
-	}
-
-	if (bypassMode)
-		return CallNextHookEx(NULL, code, wparam, lparam);
-
-	if (code == HC_ACTION && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP)) {
-		logKeyEvent("key up", keyInfo);
-
-		if (isShift(keyInfo)) {
+    // handle shift in any case (also in bypass mode) because it's relevant for toggling bypass mode
+	if (code == HC_ACTION && isShift(keyInfo)) {
+		if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
 			shiftPressed = false;  // correct?
 			if (keyInfo.vkCode == VK_RSHIFT) {
 				shiftRightPressed = false;
@@ -654,7 +643,32 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 				keybd_event(VK_LSHIFT, 42, KEYEVENTF_KEYUP, 0);
 			}
 			return -1;
-		} else if (isMod3(keyInfo)) {
+		} else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
+			shiftPressed = true;
+			if (keyInfo.vkCode == VK_RSHIFT) {
+				shiftRightPressed = true;
+				keybd_event(VK_RSHIFT, 0, 0, 0);
+			} else {
+				shiftLeftPressed = true;
+				keybd_event(VK_LSHIFT, 0, 0, 0);
+			}
+			return -1;
+		}
+	}
+
+	if (code == HC_ACTION && wparam == WM_KEYDOWN && keyInfo.scanCode == 69 && shiftPressed) {
+		// Shift + Pause
+		toggleBypassMode();
+		return -1;
+	}
+
+	if (bypassMode)
+		return CallNextHookEx(NULL, code, wparam, lparam);
+
+	if (code == HC_ACTION && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP)) {
+		logKeyEvent("key up", keyInfo);
+
+		if (isMod3(keyInfo)) {
 			if (keyInfo.scanCode == scanCodeMod3R) {
 				level3modRightPressed = false;
 				mod3Pressed = level3modLeftPressed | level3modRightPressed;
@@ -802,17 +816,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			else
 				level = 4;
 
-		if (isShift(keyInfo)) {
-			shiftPressed = true;
-			if (keyInfo.vkCode == VK_RSHIFT) {
-				shiftRightPressed = true;
-				keybd_event(VK_RSHIFT, 0, 0, 0);
-			} else {
-				shiftLeftPressed = true;
-				keybd_event(VK_LSHIFT, 0, 0, 0);
-			}
-			return -1;
-		} else if (isMod3(keyInfo)) {
+		if (isMod3(keyInfo)) {
 			if (keyInfo.scanCode == scanCodeMod3R) {
 				level3modRightPressed = true;
 				if (mod3RAsReturn)
