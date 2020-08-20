@@ -656,7 +656,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		}
 	}
 
-	if (code == HC_ACTION && wparam == WM_KEYDOWN && keyInfo.scanCode == 69 && shiftPressed) {
+	if (code == HC_ACTION && wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && shiftPressed) {
 		// Shift + Pause
 		toggleBypassMode();
 		return -1;
