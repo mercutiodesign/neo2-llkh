@@ -838,6 +838,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			}
 			mod4Pressed = level4modLeftPressed | level4modRightPressed;
 			return -1;
+		} else if (keyInfo.flags == 1) {
+			return CallNextHookEx(NULL, code, wparam, lparam);
 		} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
 			return -1;
 		} else if (level == 3 && handleLayer3SpecialCases(keyInfo)) {
