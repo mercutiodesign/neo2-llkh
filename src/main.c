@@ -410,6 +410,9 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 
 bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
+	// return if left Ctrl was injected by AltGr
+	if (keyInfo.scanCode == 541) return -1;
+
 	switch(keyInfo.scanCode) {
 		case 13:
 			sendChar(L'¨', keyInfo);  // diaeresis, umlaut
@@ -705,6 +708,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 					// send Tab
 					keybd_event(VK_TAB, 0, 0x01, 0);
 					level4modLeftAndNoOtherKeyPressed = false;
+					mod4Pressed = level4modLeftPressed | level4modRightPressed;
 					return -1;
 				}
 			} else {  // scanCodeMod4R
@@ -832,7 +836,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			if (keyInfo.scanCode == scanCodeMod4L) {
 				level4modLeftPressed = true;
 				if (mod4LAsTab)
-					level4modLeftAndNoOtherKeyPressed = true;
+					level4modLeftAndNoOtherKeyPressed = !(level4modRightPressed || level3modLeftPressed || level3modRightPressed);
 			} else { // scanCodeMod4R
 				level4modRightPressed = true;
 				/* ALTGR triggers two keys: LCONTROL and RMENU
