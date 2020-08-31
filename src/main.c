@@ -625,8 +625,85 @@ unsigned getLevel(struct ModState *modState) {
 	return level;
 }
 
-bool handleMod3Key() {
+void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKeyUp) {
+	if (isKeyUp) {
+		if (keyInfo.scanCode == scanCodeMod3R) {
+			level3modRightPressed = false;
+			modState->mod3 = level3modLeftPressed | level3modRightPressed;
+			if (mod3RAsReturn && level3modRightAndNoOtherKeyPressed) {
+				// release Mod3_R
+				keybd_event(keyInfo.vkCode, 0, KEYEVENTF_KEYUP, 0);
+				// send Return
+				keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY, 0);
+				level3modRightAndNoOtherKeyPressed = false;
+				return;
+			}
+		} else { // scanCodeMod3L (CapsLock)
+			level3modLeftPressed = false;
+			modState->mod3 = level3modLeftPressed | level3modRightPressed;
+			if (capsLockAsEscape && level3modLeftAndNoOtherKeyPressed) {
+				// release CapsLock/Mod3_L
+				keybd_event(VK_CAPITAL, 0, KEYEVENTF_KEYUP, 0);
+				// send Escape
+				keybd_event(VK_ESCAPE, 0, KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY, 0);
+				level3modLeftAndNoOtherKeyPressed = false;
+				return;
+			}
+		}
+	}
 
+	else { // keyDown
+		if (keyInfo.scanCode == scanCodeMod3R) {
+			level3modRightPressed = true;
+			if (mod3RAsReturn)
+				level3modRightAndNoOtherKeyPressed = true;
+		} else { // VK_CAPITAL (CapsLock)
+			level3modLeftPressed = true;
+			if (capsLockAsEscape)
+				level3modLeftAndNoOtherKeyPressed = true;
+		}
+		modState->mod3 = level3modLeftPressed | level3modRightPressed;
+	}
+}
+
+void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKeyUp) {
+	if (isKeyUp) {
+		if (keyInfo.scanCode == scanCodeMod4L) {
+			level4modLeftPressed = false;
+			if (level4modRightPressed && level4LockEnabled) {
+				level4LockActive = !level4LockActive;
+				printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+			} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
+				keybd_event(keyInfo.vkCode, 0, KEYEVENTF_KEYUP, 0); // release Mod4_L
+				keybd_event(VK_TAB, 0, KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY, 0); // send Tab
+				level4modLeftAndNoOtherKeyPressed = false;
+				modState->mod4 = level4modLeftPressed | level4modRightPressed;
+				return;
+			}
+		} else {  // scanCodeMod4R
+			level4modRightPressed = false;
+			if (level4modLeftPressed && level4LockEnabled) {
+				level4LockActive = !level4LockActive;
+				printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+			}
+		}
+		modState->mod4 = level4modLeftPressed | level4modRightPressed;
+	}
+
+	else { // keyDown
+		if (keyInfo.scanCode == scanCodeMod4L) {
+			level4modLeftPressed = true;
+			if (mod4LAsTab)
+				level4modLeftAndNoOtherKeyPressed = !(level4modRightPressed || level3modLeftPressed || level3modRightPressed);
+		} else { // scanCodeMod4R
+			level4modRightPressed = true;
+			/* ALTGR triggers two keys: LCONTROL and RMENU
+					we don't want to have any of those two here effective but return -1 seems
+					to change nothing, so we simply send keyup here.  */
+			keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
+		}
+		modState->mod4 = level4modLeftPressed | level4modRightPressed;
+	}
 }
 
 /**
@@ -681,86 +758,13 @@ bool updateAndWriteKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool 
 	unsigned level = getLevel(modState);
 
 	if (isMod3(keyInfo)) {
-		if (isKeyUp) {
-			if (keyInfo.scanCode == scanCodeMod3R) {
-				level3modRightPressed = newStateValue;
-				modState->mod3 = level3modLeftPressed | level3modRightPressed;
-				if (mod3RAsReturn && level3modRightAndNoOtherKeyPressed) {
-					// release Mod3_R
-					keybd_event(keyInfo.vkCode, 0, dwFlags, 0);
-					// send Return
-					keybd_event(VK_RETURN, 0, dwFlags | KEYEVENTF_EXTENDEDKEY, 0);
-					level3modRightAndNoOtherKeyPressed = newStateValue;
-					return false;
-				}
-			} else { // scanCodeMod3L (CapsLock)
-				level3modLeftPressed = newStateValue;
-				modState->mod3 = level3modLeftPressed | level3modRightPressed;
-				if (capsLockAsEscape && level3modLeftAndNoOtherKeyPressed) {
-					// release CapsLock/Mod3_L
-					keybd_event(VK_CAPITAL, 0, dwFlags, 0);
-					// send Escape
-					keybd_event(VK_ESCAPE, 0, dwFlags | KEYEVENTF_EXTENDEDKEY, 0);
-					level3modLeftAndNoOtherKeyPressed = newStateValue;
-					return false;
-				}
-			}
-			return false;
-		} else {
-			if (keyInfo.scanCode == scanCodeMod3R) {
-				level3modRightPressed = newStateValue;
-				if (mod3RAsReturn)
-					level3modRightAndNoOtherKeyPressed = newStateValue;
-			} else { // VK_CAPITAL (CapsLock)
-				level3modLeftPressed = newStateValue;
-				if (capsLockAsEscape)
-					level3modLeftAndNoOtherKeyPressed = newStateValue;
-			}
-			modState->mod3 = level3modLeftPressed | level3modRightPressed;
-			return false;
-		}
-
+		handleMod3Key(keyInfo, modState, isKeyUp);
+		return false;
 	} else if (isMod4(keyInfo)) {
-		if (isKeyUp) {
-			if (keyInfo.scanCode == scanCodeMod4L) {
-				level4modLeftPressed = newStateValue;
-				if (level4modRightPressed && level4LockEnabled) {
-					level4LockActive = !level4LockActive;
-					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
-				} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
-					keybd_event(keyInfo.vkCode, 0, dwFlags, 0); // release Mod4_L
-					keybd_event(VK_TAB, 0, dwFlags | KEYEVENTF_EXTENDEDKEY, 0); // send Tab
-					level4modLeftAndNoOtherKeyPressed = newStateValue;
-					modState->mod4 = level4modLeftPressed | level4modRightPressed;
-					return false;
-				}
-			} else {  // scanCodeMod4R
-				level4modRightPressed = newStateValue;
-				if (level4modLeftPressed && level4LockEnabled) {
-					level4LockActive = !level4LockActive;
-					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
-				}
-			}
-			modState->mod4 = level4modLeftPressed | level4modRightPressed;
-			return false;
-		} else {
-			if (keyInfo.scanCode == scanCodeMod4L) {
-				level4modLeftPressed = newStateValue;
-				if (mod4LAsTab)
-					level4modLeftAndNoOtherKeyPressed = !(level4modRightPressed || level3modLeftPressed || level3modRightPressed);
-			} else { // scanCodeMod4R
-				level4modRightPressed = newStateValue;
-				/* ALTGR triggers two keys: LCONTROL and RMENU
-				   we don't want to have any of those two here effective but return -1 seems
-				   to change nothing, so we simply send keyup here.  */
-				keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
-			}
-			modState->mod4 = level4modLeftPressed | level4modRightPressed;
-			return false;
-		}
-
+		handleMod4Key(keyInfo, modState, isKeyUp);
+		return false;
 	} else if (keyInfo.flags == 1) {
-		return 1;
+		return true;
 		// return CallNextHookEx(NULL, code, wparam, lparam);
 	} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
 		return false;
