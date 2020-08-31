@@ -647,7 +647,7 @@ unsigned getLevel(struct ModState *modState) {
 /**
  * returns `true` if execution shall be continued, `false` otherwise
  **/
-boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, WPARAM wparam)
+boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, WPARAM wparam, bool ignoreShiftCapsLock)
 {
 	bool *pressedShift = keyInfo.vkCode == VK_RSHIFT ? &shiftRightPressed : &shiftLeftPressed;
 	bool *otherShift = keyInfo.vkCode == VK_RSHIFT ? &shiftLeftPressed : &shiftRightPressed;
@@ -656,7 +656,7 @@ boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, WPARA
 		modState->shift = false;
 		*pressedShift = false;
 
-		if (*otherShift) {
+		if (*otherShift && !ignoreShiftCapsLock) {
 			if (shiftLockEnabled) {
 				sendDownUp(VK_CAPITAL, 58, false);
 				toggleShiftLock();
@@ -868,7 +868,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	}
 
 	if (code == HC_ACTION && isShift(keyInfo)) {
-		bool continueExecution = handleShiftKey(keyInfo, &modState, wparam);
+		bool continueExecution = handleShiftKey(keyInfo, &modState, wparam, bypassMode);
 		if (!continueExecution) return -1;
 	}
 
