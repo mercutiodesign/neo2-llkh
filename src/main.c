@@ -625,6 +625,10 @@ unsigned getLevel(struct ModState *modState) {
 	return level;
 }
 
+bool handleMod3Key() {
+
+}
+
 /**
  * updates system key and layerLock states; writes key
  * returns `true` if next hook should be called, `false` otherwise
@@ -704,13 +708,13 @@ bool updateAndWriteKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool 
 			return false;
 		} else {
 			if (keyInfo.scanCode == scanCodeMod3R) {
-				level3modRightPressed = true;
+				level3modRightPressed = newStateValue;
 				if (mod3RAsReturn)
-					level3modRightAndNoOtherKeyPressed = true;
+					level3modRightAndNoOtherKeyPressed = newStateValue;
 			} else { // VK_CAPITAL (CapsLock)
-				level3modLeftPressed = true;
+				level3modLeftPressed = newStateValue;
 				if (capsLockAsEscape)
-					level3modLeftAndNoOtherKeyPressed = true;
+					level3modLeftAndNoOtherKeyPressed = newStateValue;
 			}
 			modState->mod3 = level3modLeftPressed | level3modRightPressed;
 			return false;
@@ -724,10 +728,8 @@ bool updateAndWriteKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool 
 					level4LockActive = !level4LockActive;
 					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
 				} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
-					// release Mod4_L
-					keybd_event(keyInfo.vkCode, 0, dwFlags, 0);
-					// send Tab
-					keybd_event(VK_TAB, 0, dwFlags | KEYEVENTF_EXTENDEDKEY, 0);
+					keybd_event(keyInfo.vkCode, 0, dwFlags, 0); // release Mod4_L
+					keybd_event(VK_TAB, 0, dwFlags | KEYEVENTF_EXTENDEDKEY, 0); // send Tab
 					level4modLeftAndNoOtherKeyPressed = newStateValue;
 					modState->mod4 = level4modLeftPressed | level4modRightPressed;
 					return false;
@@ -742,15 +744,12 @@ bool updateAndWriteKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool 
 			modState->mod4 = level4modLeftPressed | level4modRightPressed;
 			return false;
 		} else {
-			if (keyInfo.scanCode == scanCodeMod4L)
-			{
-				level4modLeftPressed = true;
+			if (keyInfo.scanCode == scanCodeMod4L) {
+				level4modLeftPressed = newStateValue;
 				if (mod4LAsTab)
 					level4modLeftAndNoOtherKeyPressed = !(level4modRightPressed || level3modLeftPressed || level3modRightPressed);
-			}
-			else
-			{ // scanCodeMod4R
-				level4modRightPressed = true;
+			} else { // scanCodeMod4R
+				level4modRightPressed = newStateValue;
 				/* ALTGR triggers two keys: LCONTROL and RMENU
 				   we don't want to have any of those two here effective but return -1 seems
 				   to change nothing, so we simply send keyup here.  */
