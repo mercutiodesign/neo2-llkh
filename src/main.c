@@ -15,6 +15,11 @@
 #include "resources.h"
 #include <io.h>
 
+struct ModState
+{
+	bool shift, mod3, mod4;
+};
+
 HHOOK keyhook = NULL;
 #define APPNAME "neo-llkh"
 #define LEN 103
@@ -607,12 +612,187 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockCapsLockInfo, level4LockInfo, vkPacket);
 }
 
+unsigned getLevel(struct ModState *modState) {
+	unsigned level = 1;
+	if (modState->shift != shiftLockActive)
+		// (modState.shift and no shiftLockActive) XOR (shiftLockActive and no modState.shift)
+		level = 2;
+	if (modState->mod3)
+		level = (supportLevels5and6 && level == 2) ? 5 : 3;
+	if (modState->mod4 != level4LockActive)
+		level = (supportLevels5and6 && level == 3) ? 6 : 4;
+
+	return level;
+}
+
+/**
+ * updates system key and layerLock states; writes key
+ * returns `true` if next hook should be called, `false` otherwise
+ **/
+bool updateAndWriteKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKeyUp)
+{
+	bool newStateValue = !isKeyUp;
+	DWORD dwFlags = isKeyUp ? KEYEVENTF_KEYUP : 0;
+
+	// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
+	if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
+		if (swapLeftCtrlAndLeftAlt) {
+			altLeftPressed = newStateValue;
+			keybd_event(VK_LMENU, 56, dwFlags, 0);
+		} else if (swapLeftCtrlLeftAltAndLeftWin) {
+			winLeftPressed = newStateValue;
+			keybd_event(VK_LWIN, 91, dwFlags, 0);
+		} else {
+			ctrlLeftPressed = newStateValue;
+			keybd_event(VK_LCONTROL, 29, dwFlags, 0);
+		}
+		return false;
+	} else if (keyInfo.vkCode == VK_RCONTROL) {
+		ctrlRightPressed = newStateValue;
+		keybd_event(VK_RCONTROL, 29, dwFlags, 0);
+	} else if (keyInfo.vkCode == VK_LMENU) {
+		if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
+			ctrlLeftPressed = newStateValue;
+			keybd_event(VK_LCONTROL, 29, dwFlags, 0);
+		} else {
+			altLeftPressed = newStateValue;
+			keybd_event(VK_LMENU, 56, dwFlags, 0);
+		}
+		return false;
+	} else if (keyInfo.vkCode == VK_LWIN) {
+		if (swapLeftCtrlLeftAltAndLeftWin) {
+			altLeftPressed = newStateValue;
+			keybd_event(VK_LMENU, 56, dwFlags, 0);
+		} else {
+			winLeftPressed = newStateValue;
+			keybd_event(VK_LWIN, 91, dwFlags, 0);
+		}
+		return false;
+	} else if (keyInfo.vkCode == VK_RWIN) {
+		winRightPressed = newStateValue;
+		keybd_event(VK_RWIN, 92, dwFlags, 0);
+		return false;
+	}
+
+	unsigned level = getLevel(modState);
+
+	if (isMod3(keyInfo)) {
+		if (isKeyUp) {
+			if (keyInfo.scanCode == scanCodeMod3R) {
+				level3modRightPressed = newStateValue;
+				modState->mod3 = level3modLeftPressed | level3modRightPressed;
+				if (mod3RAsReturn && level3modRightAndNoOtherKeyPressed) {
+					// release Mod3_R
+					keybd_event(keyInfo.vkCode, 0, dwFlags, 0);
+					// send Return
+					keybd_event(VK_RETURN, 0, dwFlags | KEYEVENTF_EXTENDEDKEY, 0);
+					level3modRightAndNoOtherKeyPressed = newStateValue;
+					return false;
+				}
+			} else { // scanCodeMod3L (CapsLock)
+				level3modLeftPressed = newStateValue;
+				modState->mod3 = level3modLeftPressed | level3modRightPressed;
+				if (capsLockAsEscape && level3modLeftAndNoOtherKeyPressed) {
+					// release CapsLock/Mod3_L
+					keybd_event(VK_CAPITAL, 0, dwFlags, 0);
+					// send Escape
+					keybd_event(VK_ESCAPE, 0, dwFlags | KEYEVENTF_EXTENDEDKEY, 0);
+					level3modLeftAndNoOtherKeyPressed = newStateValue;
+					return false;
+				}
+			}
+			return false;
+		} else {
+			if (keyInfo.scanCode == scanCodeMod3R) {
+				level3modRightPressed = true;
+				if (mod3RAsReturn)
+					level3modRightAndNoOtherKeyPressed = true;
+			} else { // VK_CAPITAL (CapsLock)
+				level3modLeftPressed = true;
+				if (capsLockAsEscape)
+					level3modLeftAndNoOtherKeyPressed = true;
+			}
+			modState->mod3 = level3modLeftPressed | level3modRightPressed;
+			return false;
+		}
+
+	} else if (isMod4(keyInfo)) {
+		if (isKeyUp) {
+			if (keyInfo.scanCode == scanCodeMod4L) {
+				level4modLeftPressed = newStateValue;
+				if (level4modRightPressed && level4LockEnabled) {
+					level4LockActive = !level4LockActive;
+					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+				} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
+					// release Mod4_L
+					keybd_event(keyInfo.vkCode, 0, dwFlags, 0);
+					// send Tab
+					keybd_event(VK_TAB, 0, dwFlags | KEYEVENTF_EXTENDEDKEY, 0);
+					level4modLeftAndNoOtherKeyPressed = newStateValue;
+					modState->mod4 = level4modLeftPressed | level4modRightPressed;
+					return false;
+				}
+			} else {  // scanCodeMod4R
+				level4modRightPressed = newStateValue;
+				if (level4modLeftPressed && level4LockEnabled) {
+					level4LockActive = !level4LockActive;
+					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+				}
+			}
+			modState->mod4 = level4modLeftPressed | level4modRightPressed;
+			return false;
+		} else {
+			if (keyInfo.scanCode == scanCodeMod4L)
+			{
+				level4modLeftPressed = true;
+				if (mod4LAsTab)
+					level4modLeftAndNoOtherKeyPressed = !(level4modRightPressed || level3modLeftPressed || level3modRightPressed);
+			}
+			else
+			{ // scanCodeMod4R
+				level4modRightPressed = true;
+				/* ALTGR triggers two keys: LCONTROL and RMENU
+				   we don't want to have any of those two here effective but return -1 seems
+				   to change nothing, so we simply send keyup here.  */
+				keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
+			}
+			modState->mod4 = level4modLeftPressed | level4modRightPressed;
+			return false;
+		}
+
+	} else if (keyInfo.flags == 1) {
+		return 1;
+		// return CallNextHookEx(NULL, code, wparam, lparam);
+	} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
+		return false;
+	} else if (level == 3 && handleLayer3SpecialCases(keyInfo)) {
+		return false;
+	} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
+		return false;
+	} else if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) {
+		// Numeric keypad -> don't remap
+	} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
+		// numbers 0 to 9 -> don't remap
+	} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
+		TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
+		if (capsLockActive && (level == 1 || level == 2) && isLetter(key))
+			key = mapScanCodeToChar(level==1 ? 2 : 1, keyInfo.scanCode);
+		if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
+			// if key must be mapped
+			int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
+			printf("%-13s | sc:%03d %c->%c [0x%04X] (level %u)\n", " mapped", keyInfo.scanCode, character, key, key, level);
+			sendChar(key, keyInfo);
+			return false;
+		}
+	}
+
+	return true;
+}
+
 __declspec(dllexport)
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 {
-	static bool shiftPressed = false;
-	static bool mod3Pressed = false;
-	static bool mod4Pressed = false;
+	static struct ModState modState = {false, false, false};
 
 	KBDLLHOOKSTRUCT keyInfo;
 
@@ -632,7 +812,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
   // handle shift in any case (also in bypass mode) because it's relevant for toggling bypass mode
 	if (code == HC_ACTION && isShift(keyInfo)) {
 		if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
-			shiftPressed = false;  // correct?
+			modState.shift = false;  // correct?
 			if (keyInfo.vkCode == VK_RSHIFT) {
 				shiftRightPressed = false;
 				if (shiftLeftPressed) {
@@ -660,7 +840,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			}
 			return -1;
 		} else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
-			shiftPressed = true;
+			modState.shift = true;
 			if (keyInfo.vkCode == VK_RSHIFT) {
 				shiftRightPressed = true;
 				keybd_event(VK_RSHIFT, 54, 0, 0);
@@ -672,7 +852,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		}
 	}
 
-	if (code == HC_ACTION && wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && shiftPressed) {
+	if (code == HC_ACTION && wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && modState.shift) {
 		// Shift + Pause
 		toggleBypassMode();
 		return -1;
@@ -684,136 +864,11 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	if (code == HC_ACTION && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP)) {
 		logKeyEvent("key up", keyInfo);
 
-		// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
-		if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
-			if (swapLeftCtrlAndLeftAlt) {
-				altLeftPressed = false;
-				keybd_event(VK_LMENU, 56, KEYEVENTF_KEYUP, 0);
-			} else if (swapLeftCtrlLeftAltAndLeftWin) {
-				winLeftPressed = false;
-				keybd_event(VK_LWIN, 91, KEYEVENTF_KEYUP, 0);
-			} else {
-				ctrlLeftPressed = false;
-				keybd_event(VK_LCONTROL, 29, KEYEVENTF_KEYUP, 0);
-			}
+		bool callNext = updateAndWriteKey(keyInfo, &modState, true);
+		if (!callNext)
 			return -1;
-		} else if (keyInfo.vkCode == VK_RCONTROL) {
-			ctrlRightPressed = false;
-			keybd_event(VK_RCONTROL, 29, KEYEVENTF_KEYUP, 0);
-		} else if (keyInfo.vkCode == VK_LMENU) {
-			if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
-				ctrlLeftPressed = false;
-				keybd_event(VK_LCONTROL, 29, KEYEVENTF_KEYUP, 0);
-			} else {
-				altLeftPressed = false;
-				keybd_event(VK_LMENU, 56, KEYEVENTF_KEYUP, 0);
-			}
-			return -1;
-		} else if (keyInfo.vkCode == VK_LWIN) {
-			if (swapLeftCtrlLeftAltAndLeftWin) {
-				altLeftPressed = false;
-				keybd_event(VK_LMENU, 56, KEYEVENTF_KEYUP, 0);
-			} else {
-				winLeftPressed = false;
-				keybd_event(VK_LWIN, 91, KEYEVENTF_KEYUP, 0);
-			}
-			return -1;
-		} else if (keyInfo.vkCode == VK_RWIN) {
-			winRightPressed = false;
-			keybd_event(VK_RWIN, 92, KEYEVENTF_KEYUP, 0);
-		}
 
-		unsigned level = 1;
-		if (shiftPressed != shiftLockActive)
-			// (shiftPressed and no shiftLockActive) XOR (shiftLockActive and no shiftPressed)
-			level = 2;
-		if (mod3Pressed)
-			if (supportLevels5and6 && level == 2)
-				level = 5;
-			else
-				level = 3;
-		if (mod4Pressed != level4LockActive)
-			if (supportLevels5and6 && level == 3)
-				level = 6;
-			else
-				level = 4;
-
-		if (isMod3(keyInfo)) {
-			if (keyInfo.scanCode == scanCodeMod3R) {
-				level3modRightPressed = false;
-				mod3Pressed = level3modLeftPressed | level3modRightPressed;
-				if (mod3RAsReturn && level3modRightAndNoOtherKeyPressed) {
-					// release Mod3_R
-					keybd_event(keyInfo.vkCode, 0, KEYEVENTF_KEYUP, 0);
-					// send Return
-					keybd_event(VK_RETURN, 0, KEYEVENTF_EXTENDEDKEY, 0);
-					level3modRightAndNoOtherKeyPressed = false;
-					return -1;
-				}
-			} else {  // scanCodeMod3L (CapsLock)
-				level3modLeftPressed = false;
-				mod3Pressed = level3modLeftPressed | level3modRightPressed;
-				if (capsLockAsEscape && level3modLeftAndNoOtherKeyPressed) {
-					// release CapsLock/Mod3_L
-					keybd_event(VK_CAPITAL, 0, KEYEVENTF_KEYUP, 0);
-					// send Escape
-					keybd_event(VK_ESCAPE, 0, KEYEVENTF_EXTENDEDKEY, 0);
-					level3modLeftAndNoOtherKeyPressed = false;
-					return -1;
-				}
-			}
-			return -1;
-		} else if (isMod4(keyInfo)) {
-			if (keyInfo.scanCode == scanCodeMod4L) {
-				level4modLeftPressed = false;
-				if (level4modRightPressed && level4LockEnabled) {
-					level4LockActive = !level4LockActive;
-					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
-				} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
-					// release Mod4_L
-					keybd_event(keyInfo.vkCode, 0, KEYEVENTF_KEYUP, 0);
-					// send Tab
-					keybd_event(VK_TAB, 0, KEYEVENTF_EXTENDEDKEY, 0);
-					level4modLeftAndNoOtherKeyPressed = false;
-					mod4Pressed = level4modLeftPressed | level4modRightPressed;
-					return -1;
-				}
-			} else {  // scanCodeMod4R
-				level4modRightPressed = false;
-				if (level4modLeftPressed && level4LockEnabled) {
-					level4LockActive = !level4LockActive;
-					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
-				}
-			}
-			mod4Pressed = level4modLeftPressed | level4modRightPressed;
-			return -1;
-		} else if (keyInfo.flags == 1) {
-			return CallNextHookEx(NULL, code, wparam, lparam);
-		} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
-			return -1;
-		} else if (level == 3 && handleLayer3SpecialCases(keyInfo)) {
-			return -1;
-		} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
-			return -1;
-		} else if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) {
-			// Numeric keypad -> don't remap
-		} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
-			// numbers 0 to 9 -> don't remap
-		} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
-			TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
-			if (capsLockActive && (level == 1 || level == 2) && isLetter(key))
-				key = mapScanCodeToChar(level==1 ? 2 : 1, keyInfo.scanCode);
-			if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
-				// if key must be mapped
-				int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
-				printf("%-13s | sc:%03d %c->%c [0x%04X] (level %u)\n", " mapped", keyInfo.scanCode, character, key, key, level);
-				sendChar(key, keyInfo);
-				return -1;
-			}
-		}
-	}
-
-	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
+	}	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
     printf("\n");
 		logKeyEvent("key down", keyInfo);
 
@@ -821,110 +876,9 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		level3modRightAndNoOtherKeyPressed = false;
 		level4modLeftAndNoOtherKeyPressed = false;
 
-		// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
-		if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
-			if (swapLeftCtrlAndLeftAlt) {
-				altLeftPressed = true;
-				keybd_event(VK_LMENU, 56, 0, 0);
-			} else if (swapLeftCtrlLeftAltAndLeftWin) {
-				winLeftPressed = true;
-				keybd_event(VK_LWIN, 91, 0, 0);
-			} else {
-				ctrlLeftPressed = true;
-				keybd_event(VK_LCONTROL, 29, 0, 0);
-			}
+		bool callNext = updateAndWriteKey(keyInfo, &modState, false);
+		if (!callNext)
 			return -1;
-		} else if (keyInfo.vkCode == VK_RCONTROL) {
-			ctrlRightPressed = true;
-			keybd_event(VK_RCONTROL, 29, 0, 0);
-		} else if (keyInfo.vkCode == VK_LMENU) {
-			if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
-				ctrlLeftPressed = true;
-				keybd_event(VK_LCONTROL, 29, 0, 0);
-			} else {
-				altLeftPressed = true;
-				keybd_event(VK_LMENU, 56, 0, 0);
-			}
-			return -1;
-		} else if (keyInfo.vkCode == VK_LWIN) {
-			if (swapLeftCtrlLeftAltAndLeftWin) {
-				altLeftPressed = true;
-				keybd_event(VK_LMENU, 56, 0, 0);
-			} else {
-				winLeftPressed = true;
-				keybd_event(VK_LWIN, 91, 0, 0);
-			}
-			return -1;
-		} else if (keyInfo.vkCode == VK_RWIN) {
-			winRightPressed = true;
-			keybd_event(VK_RWIN, 92, 0, 0);
-		}
-
-		unsigned level = 1;
-		if (shiftPressed != shiftLockActive)
-			// (shiftPressed and no shiftLockActive) or (shiftLockActive and no shiftPressed) (XOR)
-			level = 2;
-		if (mod3Pressed)
-			if (supportLevels5and6 && level == 2)
-				level = 5;
-			else
-				level = 3;
-		if (mod4Pressed != level4LockActive)
-			if (supportLevels5and6 && level == 3)
-				level = 6;
-			else
-				level = 4;
-
-		if (isMod3(keyInfo)) {
-			if (keyInfo.scanCode == scanCodeMod3R) {
-				level3modRightPressed = true;
-				if (mod3RAsReturn)
-					level3modRightAndNoOtherKeyPressed = true;
-			} else {  // VK_CAPITAL (CapsLock)
-				level3modLeftPressed = true;
-				if (capsLockAsEscape)
-					level3modLeftAndNoOtherKeyPressed = true;
-			}
-			mod3Pressed = level3modLeftPressed | level3modRightPressed;
-			return -1;
-		} else if (isMod4(keyInfo)) {
-			if (keyInfo.scanCode == scanCodeMod4L) {
-				level4modLeftPressed = true;
-				if (mod4LAsTab)
-					level4modLeftAndNoOtherKeyPressed = !(level4modRightPressed || level3modLeftPressed || level3modRightPressed);
-			} else { // scanCodeMod4R
-				level4modRightPressed = true;
-				/* ALTGR triggers two keys: LCONTROL and RMENU
-				   we don't want to have any of those two here effective but return -1 seems
-				   to change nothing, so we simply send keyup here.  */
-				keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
-			}
-			mod4Pressed = level4modLeftPressed | level4modRightPressed;
-			return -1;
-		} else if (keyInfo.flags == 1) {
-			return CallNextHookEx(NULL, code, wparam, lparam);
-		} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
-			return -1;
-		} else if (level == 3 && handleLayer3SpecialCases(keyInfo)) {
-			return -1;
-		} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
-			return -1;
-		} else if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) {
-			// Numeric keypad -> don't remap
-		} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
-			// numbers 0 to 9 -> don't remap
-		} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
-			TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
-			if (capsLockActive && (level == 1 || level == 2) && isLetter(key))
-				key = mapScanCodeToChar(level==1 ? 2 : 1, keyInfo.scanCode);
-			if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
-				// if key must be mapped
-				int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
-				printf("%-13s | sc:%03d %c->%c [0x%04X] (level %u)\n", " mapped", keyInfo.scanCode, character, key, key, level);
-				sendChar(key, keyInfo);
-				return -1;
-			}
-		}
 	}
 	/* Passes the hook information to the next hook procedure in the current hook chain.
 	 * 1st Parameter hhk - Optional
