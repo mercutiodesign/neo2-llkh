@@ -625,6 +625,111 @@ unsigned getLevel(struct ModState *modState) {
 	return level;
 }
 
+/**
+ * returns `true` if execution shall be continued, `false` otherwise
+ **/
+boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, WPARAM wparam)
+{
+	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
+		modState->shift = false;
+
+		if (keyInfo.vkCode == VK_RSHIFT) { // right shift
+			shiftRightPressed = false;
+			if (shiftLeftPressed) {
+				if (shiftLockEnabled) {
+					shiftLockActive = !shiftLockActive;
+					printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
+				} else if (capsLockEnabled) {
+					capsLockActive = !capsLockActive;
+					printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
+				}
+			}
+			keybd_event(VK_RSHIFT, 54, KEYEVENTF_KEYUP, 0);
+		}
+
+		else { // left shift
+			shiftLeftPressed = false;
+			if (shiftRightPressed) {
+				if (shiftLockEnabled) {
+					shiftLockActive = !shiftLockActive;
+					printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
+				} else if (capsLockEnabled) {
+					capsLockActive = !capsLockActive;
+					printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
+				}
+			}
+			keybd_event(VK_LSHIFT, 42, KEYEVENTF_KEYUP, 0);
+		}
+
+		return false;
+	}
+
+	else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
+		modState->shift = true;
+
+		if (keyInfo.vkCode == VK_RSHIFT) { // right shift
+			shiftRightPressed = true;
+			keybd_event(VK_RSHIFT, 54, 0, 0);
+		} else { // left shift
+			shiftLeftPressed = true;
+			keybd_event(VK_LSHIFT, 42, 0, 0);
+		}
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * returns `true` if no systemKey was pressed -> continue execution, `false` otherwise
+ **/
+boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
+	bool newStateValue = !isKeyUp;
+	DWORD dwFlags = isKeyUp ? KEYEVENTF_KEYUP : 0;
+
+	// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
+	if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
+		if (swapLeftCtrlAndLeftAlt) {
+			altLeftPressed = newStateValue;
+			keybd_event(VK_LMENU, 56, dwFlags, 0);
+		} else if (swapLeftCtrlLeftAltAndLeftWin) {
+			winLeftPressed = newStateValue;
+			keybd_event(VK_LWIN, 91, dwFlags, 0);
+		} else {
+			ctrlLeftPressed = newStateValue;
+			keybd_event(VK_LCONTROL, 29, dwFlags, 0);
+		}
+		return false;
+	} else if (keyInfo.vkCode == VK_RCONTROL) {
+		ctrlRightPressed = newStateValue;
+		keybd_event(VK_RCONTROL, 29, dwFlags, 0);
+	} else if (keyInfo.vkCode == VK_LMENU) {
+		if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
+			ctrlLeftPressed = newStateValue;
+			keybd_event(VK_LCONTROL, 29, dwFlags, 0);
+		} else {
+			altLeftPressed = newStateValue;
+			keybd_event(VK_LMENU, 56, dwFlags, 0);
+		}
+		return false;
+	} else if (keyInfo.vkCode == VK_LWIN) {
+		if (swapLeftCtrlLeftAltAndLeftWin) {
+			altLeftPressed = newStateValue;
+			keybd_event(VK_LMENU, 56, dwFlags, 0);
+		} else {
+			winLeftPressed = newStateValue;
+			keybd_event(VK_LWIN, 91, dwFlags, 0);
+		}
+		return false;
+	} else if (keyInfo.vkCode == VK_RWIN) {
+		winRightPressed = newStateValue;
+		keybd_event(VK_RWIN, 92, dwFlags, 0);
+		return false;
+	}
+
+	return true;
+}
+
 void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKeyUp) {
 	if (isKeyUp) {
 		if (keyInfo.scanCode == scanCodeMod3R) {
@@ -680,7 +785,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKe
 				modState->mod4 = level4modLeftPressed | level4modRightPressed;
 				return;
 			}
-		} else {  // scanCodeMod4R
+		} else { // scanCodeMod4R
 			level4modRightPressed = false;
 			if (level4modLeftPressed && level4LockEnabled) {
 				level4LockActive = !level4LockActive;
@@ -712,48 +817,9 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKe
  **/
 bool updateAndWriteKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKeyUp)
 {
-	bool newStateValue = !isKeyUp;
-	DWORD dwFlags = isKeyUp ? KEYEVENTF_KEYUP : 0;
-
-	// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
-	if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
-		if (swapLeftCtrlAndLeftAlt) {
-			altLeftPressed = newStateValue;
-			keybd_event(VK_LMENU, 56, dwFlags, 0);
-		} else if (swapLeftCtrlLeftAltAndLeftWin) {
-			winLeftPressed = newStateValue;
-			keybd_event(VK_LWIN, 91, dwFlags, 0);
-		} else {
-			ctrlLeftPressed = newStateValue;
-			keybd_event(VK_LCONTROL, 29, dwFlags, 0);
-		}
+	bool continueExecution = handleSystemKey(keyInfo, isKeyUp);
+	if (!continueExecution)
 		return false;
-	} else if (keyInfo.vkCode == VK_RCONTROL) {
-		ctrlRightPressed = newStateValue;
-		keybd_event(VK_RCONTROL, 29, dwFlags, 0);
-	} else if (keyInfo.vkCode == VK_LMENU) {
-		if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
-			ctrlLeftPressed = newStateValue;
-			keybd_event(VK_LCONTROL, 29, dwFlags, 0);
-		} else {
-			altLeftPressed = newStateValue;
-			keybd_event(VK_LMENU, 56, dwFlags, 0);
-		}
-		return false;
-	} else if (keyInfo.vkCode == VK_LWIN) {
-		if (swapLeftCtrlLeftAltAndLeftWin) {
-			altLeftPressed = newStateValue;
-			keybd_event(VK_LMENU, 56, dwFlags, 0);
-		} else {
-			winLeftPressed = newStateValue;
-			keybd_event(VK_LWIN, 91, dwFlags, 0);
-		}
-		return false;
-	} else if (keyInfo.vkCode == VK_RWIN) {
-		winRightPressed = newStateValue;
-		keybd_event(VK_RWIN, 92, dwFlags, 0);
-		return false;
-	}
 
 	unsigned level = getLevel(modState);
 
@@ -814,45 +880,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 
   // handle shift in any case (also in bypass mode) because it's relevant for toggling bypass mode
 	if (code == HC_ACTION && isShift(keyInfo)) {
-		if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
-			modState.shift = false;  // correct?
-			if (keyInfo.vkCode == VK_RSHIFT) {
-				shiftRightPressed = false;
-				if (shiftLeftPressed) {
-					if (shiftLockEnabled) {
-						shiftLockActive = !shiftLockActive;
-						printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
-					} else if (capsLockEnabled) {
-						capsLockActive = !capsLockActive;
-						printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
-					}
-				}
-				keybd_event(VK_RSHIFT, 54, KEYEVENTF_KEYUP, 0);
-			} else {
-				shiftLeftPressed = false;
-				if (shiftRightPressed) {
-					if (shiftLockEnabled) {
-						shiftLockActive = !shiftLockActive;
-						printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
-					} else if (capsLockEnabled) {
-						capsLockActive = !capsLockActive;
-						printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
-					}
-				}
-				keybd_event(VK_LSHIFT, 42, KEYEVENTF_KEYUP, 0);
-			}
-			return -1;
-		} else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
-			modState.shift = true;
-			if (keyInfo.vkCode == VK_RSHIFT) {
-				shiftRightPressed = true;
-				keybd_event(VK_RSHIFT, 54, 0, 0);
-			} else {
-				shiftLeftPressed = true;
-				keybd_event(VK_LSHIFT, 42, 0, 0);
-			}
-			return -1;
-		}
+		bool continueExecution = handleShiftKey(keyInfo, &modState, wparam);
+		if (!continueExecution) return -1;
 	}
 
 	if (code == HC_ACTION && wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && modState.shift) {
@@ -868,8 +897,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		logKeyEvent("key up", keyInfo);
 
 		bool callNext = updateAndWriteKey(keyInfo, &modState, true);
-		if (!callNext)
-			return -1;
+		if (!callNext) return -1;
 
 	}	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
     printf("\n");
@@ -880,9 +908,9 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		level4modLeftAndNoOtherKeyPressed = false;
 
 		bool callNext = updateAndWriteKey(keyInfo, &modState, false);
-		if (!callNext)
-			return -1;
+		if (!callNext) return -1;
 	}
+
 	/* Passes the hook information to the next hook procedure in the current hook chain.
 	 * 1st Parameter hhk - Optional
 	 * 2nd Parameter nCode - The next hook procedure uses this code to determine how to process the hook information.
