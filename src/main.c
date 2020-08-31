@@ -731,6 +731,7 @@ void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKe
 				// release Mod3_R
 				keybd_event(keyInfo.vkCode, 0, KEYEVENTF_KEYUP, 0);
 				// send Return
+				keybd_event(VK_RETURN, 0, KEYEVENTF_EXTENDEDKEY, 0);
 				keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY, 0);
 				level3modRightAndNoOtherKeyPressed = false;
 				return;
@@ -742,6 +743,7 @@ void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKe
 				// release CapsLock/Mod3_L
 				keybd_event(VK_CAPITAL, 0, KEYEVENTF_KEYUP, 0);
 				// send Escape
+				keybd_event(VK_ESCAPE, 0, KEYEVENTF_EXTENDEDKEY, 0);
 				keybd_event(VK_ESCAPE, 0, KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY, 0);
 				level3modLeftAndNoOtherKeyPressed = false;
 				return;
@@ -772,7 +774,9 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKe
 				printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
 			} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
 				keybd_event(keyInfo.vkCode, 0, KEYEVENTF_KEYUP, 0); // release Mod4_L
-				keybd_event(VK_TAB, 0, KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY, 0); // send Tab
+				keybd_event(VK_TAB, 0, KEYEVENTF_EXTENDEDKEY, 0); // send Tab down
+				keybd_event(VK_TAB, 0, KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY, 0); // send Tab up
+
 				level4modLeftAndNoOtherKeyPressed = false;
 				modState->mod4 = level4modLeftPressed | level4modRightPressed;
 				return;
