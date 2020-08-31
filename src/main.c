@@ -629,50 +629,33 @@ unsigned getLevel(struct ModState *modState) {
  **/
 boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, WPARAM wparam)
 {
+	bool *pressedShift = keyInfo.vkCode == VK_RSHIFT ? &shiftRightPressed : &shiftLeftPressed;
+	bool *otherShift = keyInfo.vkCode == VK_RSHIFT ? &shiftLeftPressed : &shiftRightPressed;
+
 	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
 		modState->shift = false;
+		*pressedShift = false;
 
-		if (keyInfo.vkCode == VK_RSHIFT) { // right shift
-			shiftRightPressed = false;
-			if (shiftLeftPressed) {
-				if (shiftLockEnabled) {
-					shiftLockActive = !shiftLockActive;
-					printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
-				} else if (capsLockEnabled) {
-					capsLockActive = !capsLockActive;
-					printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
-				}
+		if (*otherShift) {
+			if (shiftLockEnabled) {
+				keybd_event(VK_CAPITAL, 58, 0, 0);
+				keybd_event(VK_CAPITAL, 58, KEYEVENTF_KEYUP, 0);
+				shiftLockActive = !shiftLockActive;
+				printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
+			} else if (capsLockEnabled) {
+				keybd_event(VK_CAPITAL, 58, 0, 0);
+				keybd_event(VK_CAPITAL, 58, KEYEVENTF_KEYUP, 0);
+				capsLockActive = !capsLockActive;
+				printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
 			}
-			keybd_event(VK_RSHIFT, 54, KEYEVENTF_KEYUP, 0);
 		}
-
-		else { // left shift
-			shiftLeftPressed = false;
-			if (shiftRightPressed) {
-				if (shiftLockEnabled) {
-					shiftLockActive = !shiftLockActive;
-					printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
-				} else if (capsLockEnabled) {
-					capsLockActive = !capsLockActive;
-					printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
-				}
-			}
-			keybd_event(VK_LSHIFT, 42, KEYEVENTF_KEYUP, 0);
-		}
+		keybd_event(keyInfo.vkCode, keyInfo.scanCode, KEYEVENTF_KEYUP, 0);
 
 		return false;
-	}
-
-	else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
+	}	else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
 		modState->shift = true;
-
-		if (keyInfo.vkCode == VK_RSHIFT) { // right shift
-			shiftRightPressed = true;
-			keybd_event(VK_RSHIFT, 54, 0, 0);
-		} else { // left shift
-			shiftLeftPressed = true;
-			keybd_event(VK_LSHIFT, 42, 0, 0);
-		}
+		*pressedShift = true;
+		keybd_event(keyInfo.vkCode, keyInfo.scanCode, 0, 0);
 		return false;
 	}
 
@@ -880,11 +863,12 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		}
 	}
 
-  // handle shift in any case (also in bypass mode) because it's relevant for toggling bypass mode
 	if (code == HC_ACTION && isShift(keyInfo)) {
 		bool continueExecution = handleShiftKey(keyInfo, &modState, wparam);
 		if (!continueExecution) return -1;
 	}
+
+
 
 	if (code == HC_ACTION && wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && modState.shift) {
 		// Shift + Pause
@@ -892,8 +876,19 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		return -1;
 	}
 
-	if (bypassMode)
+	if (bypassMode) {
+		if (code == HC_ACTION && keyInfo.vkCode == VK_CAPITAL && !(keyInfo.flags & LLKHF_UP)) {
+			// synchronice with caps lock state during bypass
+			if (capsLockEnabled) {
+				capsLockActive = !capsLockActive;
+				printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
+			} else if (shiftLockEnabled) {
+				shiftLockActive = !shiftLockActive;
+				printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
+			}
+		}
 		return CallNextHookEx(NULL, code, wparam, lparam);
+	}
 
 	if (code == HC_ACTION && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP)) {
 		logKeyEvent("key up", keyInfo);
