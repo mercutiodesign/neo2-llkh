@@ -815,7 +815,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKe
  * updates system key and layerLock states; writes key
  * returns `true` if next hook should be called, `false` otherwise
  **/
-bool updateAndWriteKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKeyUp)
+bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKeyUp)
 {
 	bool continueExecution = handleSystemKey(keyInfo, isKeyUp);
 	if (!continueExecution)
@@ -896,7 +896,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	if (code == HC_ACTION && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP)) {
 		logKeyEvent("key up", keyInfo);
 
-		bool callNext = updateAndWriteKey(keyInfo, &modState, true);
+		bool callNext = updateStatesAndWriteKey(keyInfo, &modState, true);
 		if (!callNext) return -1;
 
 	}	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
@@ -907,7 +907,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		level3modRightAndNoOtherKeyPressed = false;
 		level4modLeftAndNoOtherKeyPressed = false;
 
-		bool callNext = updateAndWriteKey(keyInfo, &modState, false);
+		bool callNext = updateStatesAndWriteKey(keyInfo, &modState, false);
 		if (!callNext) return -1;
 	}
 
