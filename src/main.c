@@ -95,7 +95,7 @@ TCHAR mappingTableLevel3[LEN];
 TCHAR mappingTableLevel4[LEN];
 TCHAR mappingTableLevel5[LEN];
 TCHAR mappingTableLevel6[LEN];
-
+CHAR mappingTableLevel4Special[LEN];
 
 void SetStdOutToNewConsole()
 {
@@ -273,6 +273,46 @@ void initLayout()
 	}
 
 	mappingTableLevel2[8] = 0x20AC;  // €
+
+	// level4 special cases
+	for (int i = 0; i < LEN; i++)
+		mappingTableLevel4Special[i] = 0;
+
+	mappingTableLevel4Special[16] = VK_PRIOR;
+	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0)
+	{
+		mappingTableLevel4Special[17] = VK_NEXT;
+		mappingTableLevel4Special[18] = VK_UP;
+		mappingTableLevel4Special[19] = VK_BACK;
+		mappingTableLevel4Special[20] = VK_DELETE;
+	}
+	else
+	{
+		mappingTableLevel4Special[17] = VK_BACK;
+		mappingTableLevel4Special[18] = VK_UP;
+		mappingTableLevel4Special[19] = VK_DELETE;
+		mappingTableLevel4Special[20] = VK_NEXT;
+	}
+	mappingTableLevel4Special[30] = VK_HOME;
+	mappingTableLevel4Special[31] = VK_LEFT;
+	mappingTableLevel4Special[32] = VK_DOWN;
+	mappingTableLevel4Special[33] = VK_RIGHT;
+	mappingTableLevel4Special[34] = VK_END;
+	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0)
+	{
+		mappingTableLevel4Special[44] = VK_INSERT;
+		mappingTableLevel4Special[45] = VK_TAB;
+		mappingTableLevel4Special[46] = VK_RETURN;
+		mappingTableLevel4Special[47] = VK_ESCAPE;
+	}
+	else
+	{
+		mappingTableLevel4Special[44] = VK_ESCAPE;
+		mappingTableLevel4Special[45] = VK_TAB;
+		mappingTableLevel4Special[46] = VK_INSERT;
+		mappingTableLevel4Special[47] = VK_RETURN;
+	}
+	mappingTableLevel4Special[57] = '0';
 }
 
 /**
@@ -449,48 +489,15 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	// A second level 4 mapping table for special (non-unicode) keys.
 	// Maybe this could be included in the global TCHAR mapping table or level 4!?
 	BYTE bScan = 0;
-	CHAR mappingTable[LEN];
-	for (int i = 0; i < LEN; i++)
-		mappingTable[i] = 0;
 
-	mappingTable[16] = VK_PRIOR;
-	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
-		mappingTable[17] = VK_NEXT;
-		mappingTable[18] = VK_UP;
-		mappingTable[19] = VK_BACK;
-		mappingTable[20] = VK_DELETE;
-	} else {
-		mappingTable[17] = VK_BACK;
-		mappingTable[18] = VK_UP;
-		mappingTable[19] = VK_DELETE;
-		mappingTable[20] = VK_NEXT;
-	}
-	mappingTable[30] = VK_HOME;
-	mappingTable[31] = VK_LEFT;
-	mappingTable[32] = VK_DOWN;
-	mappingTable[33] = VK_RIGHT;
-	mappingTable[34] = VK_END;
-	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
-		mappingTable[44] = VK_INSERT;
-		mappingTable[45] = VK_TAB;
-		mappingTable[46] = VK_RETURN;
-		mappingTable[47] = VK_ESCAPE;
-	} else {
-		mappingTable[44] = VK_ESCAPE;
-		mappingTable[45] = VK_TAB;
-		mappingTable[46] = VK_INSERT;
-		mappingTable[47] = VK_RETURN;
-	}
-	mappingTable[57] = '0';
-
-	if (mappingTable[keyInfo.scanCode] != 0) {
-		if (mappingTable[keyInfo.scanCode] == VK_RETURN)
+	if (mappingTableLevel4Special[keyInfo.scanCode] != 0) {
+		if (mappingTableLevel4Special[keyInfo.scanCode] == VK_RETURN)
 			bScan = 0x1c;
-		else if (mappingTable[keyInfo.scanCode] == VK_INSERT)
+		else if (mappingTableLevel4Special[keyInfo.scanCode] == VK_INSERT)
 			bScan = 0x52;
 
 		// extended flag (bit 0) is necessary for selecting text with shift + arrow
-		keybd_event(mappingTable[keyInfo.scanCode], bScan, dwFlagsFromKeyInfo(keyInfo) | KEYEVENTF_EXTENDEDKEY, 0);
+		keybd_event(mappingTableLevel4Special[keyInfo.scanCode], bScan, dwFlagsFromKeyInfo(keyInfo) | KEYEVENTF_EXTENDEDKEY, 0);
 
 		return true;
 	}
