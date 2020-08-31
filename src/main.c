@@ -356,25 +356,17 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 			alt = false;
 		}
 
-		if (altgr)
-			keybd_event(VK_RMENU, 0, 0, 0);
-		if (ctrl)
-			keybd_event(VK_CONTROL, 0, 0, 0);
-		if (alt)
-			keybd_event(VK_MENU, 0, 0, 0); // ALT
-		if (shift)
-			keybd_event(VK_SHIFT, 0, 0, 0);
+		if (altgr) keybd_event(VK_RMENU, 0, 0, 0);
+		if (ctrl) keybd_event(VK_CONTROL, 0, 0, 0);
+		if (alt) keybd_event(VK_MENU, 0, 0, 0); // ALT
+		if (shift) keybd_event(VK_SHIFT, 0, 0, 0);
 
 		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlagsFromKeyInfo(keyInfo), keyInfo.dwExtraInfo);
 
-		if (altgr)
-			keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
-		if (ctrl)
-			keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
-		if (alt)
-			keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0); // ALT
-		if (shift)
-			keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
+		if (altgr) keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
+		if (ctrl) keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
+		if (alt) keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0); // ALT
+		if (shift) keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
 	}
 }
 
@@ -515,30 +507,30 @@ bool isShift(KBDLLHOOKSTRUCT keyInfo)
 bool isMod3(KBDLLHOOKSTRUCT keyInfo)
 {
 	return keyInfo.scanCode == scanCodeMod3L
-	    || keyInfo.scanCode == scanCodeMod3R;
+			|| keyInfo.scanCode == scanCodeMod3R;
 }
 
 bool isMod4(KBDLLHOOKSTRUCT keyInfo)
 {
 	return keyInfo.scanCode == scanCodeMod4L
-	    || keyInfo.vkCode == VK_RMENU;
+			|| keyInfo.vkCode == VK_RMENU;
 }
 
 bool isSystemKeyPressed()
 {
 	return ctrlLeftPressed || ctrlRightPressed
-	    || altLeftPressed
-	    || winLeftPressed || winRightPressed;
+			|| altLeftPressed
+			|| winLeftPressed || winRightPressed;
 }
 
 bool isLetter(TCHAR key)
 {
 	return (key >= 65 && key <= 90  // A-Z
-	        || key >= 97 && key <= 122  // a-z
-	        || key == L'ä' || key == L'ö'
-	        || key == L'ü' || key == L'ß'
-	        || key == L'Ä' || key == L'Ö'
-	        || key == L'Ü' || key == L'ẞ');
+			 || key >= 97 && key <= 122  // a-z
+			 || key == L'ä' || key == L'ö'
+			 || key == L'ü' || key == L'ß'
+			 || key == L'Ä' || key == L'Ö'
+			 || key == L'Ü' || key == L'ẞ');
 }
 
 void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
@@ -818,8 +810,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKe
 bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKeyUp)
 {
 	bool continueExecution = handleSystemKey(keyInfo, isKeyUp);
-	if (!continueExecution)
-		return false;
+	if (!continueExecution) return false;
 
 	unsigned level = getLevel(modState);
 
