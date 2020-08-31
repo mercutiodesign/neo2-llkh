@@ -291,16 +291,27 @@ TCHAR mapScanCodeToChar(unsigned level, char in)
 	}
 }
 
+/**
+ * Maps keyInfo flags (https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-kbdllhookstruct)
+ * to dwFlags for keybd_event (https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-keybd_event)
+ **/
+DWORD dwFlagsFromKeyInfo(KBDLLHOOKSTRUCT keyInfo)
+{
+	DWORD dwFlags = 0;
+	if (keyInfo.flags & LLKHF_EXTENDED)
+		dwFlags |= KEYEVENTF_EXTENDEDKEY;
+	if (keyInfo.flags & LLKHF_UP)
+		dwFlags |= KEYEVENTF_KEYUP;
+	return dwFlags;
+}
+
 void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 {
 	KEYBDINPUT kb={0};
 	INPUT Input={0};
 
 	kb.wScan = key;
-	kb.dwFlags = KEYEVENTF_UNICODE;
-	if (keyInfo.flags & 0x80)
-		kb.dwFlags |= KEYEVENTF_KEYUP;
-
+	kb.dwFlags = KEYEVENTF_UNICODE | dwFlagsFromKeyInfo(keyInfo);
 	Input.type = INPUT_KEYBOARD;
 	Input.ki = kb;
 	SendInput(1, &Input, sizeof(Input));
@@ -349,7 +360,7 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 		if (shift)
 			keybd_event(VK_SHIFT, 0, 0, 0);
 
-		keybd_event(keyInfo.vkCode, keyInfo.scanCode, keyInfo.flags & 0x80 ? KEYEVENTF_KEYUP : 0, keyInfo.dwExtraInfo);
+		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlagsFromKeyInfo(keyInfo), keyInfo.dwExtraInfo);
 
 		if (altgr)
 			keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
@@ -359,6 +370,19 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 			keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0); // ALT
 		if (shift)
 			keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
+	}
+}
+
+/**
+ * Send a usually dead key by injecting space after (on down).
+ * This will add an actual space if actual dead key is followed by "dead" key with this
+ **/
+void commitDeadKey(KBDLLHOOKSTRUCT keyInfo)
+{
+	if (!(keyInfo.flags & LLKHF_UP))
+	{
+		keybd_event(VK_SPACE, 0x39, 0, 0);
+		keybd_event(VK_SPACE, 0x39, KEYEVENTF_KEYUP, 0);
 	}
 }
 
@@ -374,7 +398,6 @@ bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		default:
 			return false;
 	}
-
 }
 
 bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
@@ -385,9 +408,7 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 			return true;
 		case 20:
 			sendChar(L'^', keyInfo);
-			if (!(keyInfo.flags & 0x80))
-				keybd_event(VK_SPACE, 0x39, 0, 0);
-				keybd_event(VK_SPACE, 0x39, KEYEVENTF_KEYUP, 0);
+			commitDeadKey(keyInfo);
 			return true;
 		case 27:
 			sendChar(L'̷', keyInfo);  // bar (diakritischer Schrägstrich)
@@ -395,25 +416,20 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		case 31:
 			if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
 				sendChar(L'`', keyInfo);
-				if (!(keyInfo.flags & 0x80))
-					keybd_event(VK_SPACE, 0x39, 0, 0);
-					keybd_event(VK_SPACE, 0x39, KEYEVENTF_KEYUP, 0);
+				commitDeadKey(keyInfo);
 				return true;
 			}
 			return false;
 		case 48:
 			if (strcmp(layout, "kou") != 0 && strcmp(layout, "vou") != 0) {
 				sendChar(L'`', keyInfo);
-				if (!(keyInfo.flags & 0x80))
-					keybd_event(VK_SPACE, 0x39, 0, 0);
-					keybd_event(VK_SPACE, 0x39, KEYEVENTF_KEYUP, 0);
+				commitDeadKey(keyInfo);
 				return true;
 			}
 			return false;
 		default:
 			return false;
 	}
-
 }
 
 bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
@@ -477,7 +493,7 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 			bScan = 0x52;
 
 		// extended flag (bit 0) is necessary for selecting text with shift + arrow
-		keybd_event(mappingTable[keyInfo.scanCode], bScan, keyInfo.flags & 0x80 ? KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY : KEYEVENTF_EXTENDEDKEY, 0);
+		keybd_event(mappingTable[keyInfo.scanCode], bScan, dwFlagsFromKeyInfo(keyInfo) | KEYEVENTF_EXTENDEDKEY, 0);
 
 		return true;
 	}
@@ -602,7 +618,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 
 	if (
 		code == HC_ACTION
-	    && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP || wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)
+		&& (wparam == WM_SYSKEYUP || wparam == WM_KEYUP || wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)
 	) {
 		keyInfo = *((KBDLLHOOKSTRUCT *) lparam);
 
@@ -613,7 +629,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		}
 	}
 
-    // handle shift in any case (also in bypass mode) because it's relevant for toggling bypass mode
+  // handle shift in any case (also in bypass mode) because it's relevant for toggling bypass mode
 	if (code == HC_ACTION && isShift(keyInfo)) {
 		if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
 			shiftPressed = false;  // correct?
@@ -798,7 +814,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	}
 
 	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
-        printf("\n");
+    printf("\n");
 		logKeyEvent("key down", keyInfo);
 
 		level3modLeftAndNoOtherKeyPressed = false;
