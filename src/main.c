@@ -15,10 +15,10 @@
 #include "resources.h"
 #include <io.h>
 
-struct ModState
+typedef struct ModState
 {
 	bool shift, mod3, mod4;
-};
+} ModState;
 
 HHOOK keyhook = NULL;
 #define APPNAME "neo-llkh"
@@ -631,7 +631,7 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockCapsLockInfo, level4LockInfo, vkPacket);
 }
 
-unsigned getLevel(struct ModState *modState) {
+unsigned getLevel(ModState *modState) {
 	unsigned level = 1;
 	if (modState->shift != shiftLockActive)
 		// (modState.shift and no shiftLockActive) XOR (shiftLockActive and no modState.shift)
@@ -647,7 +647,7 @@ unsigned getLevel(struct ModState *modState) {
 /**
  * returns `true` if execution shall be continued, `false` otherwise
  **/
-boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, WPARAM wparam, bool ignoreShiftCapsLock)
+boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, ModState *modState, WPARAM wparam, bool ignoreShiftCapsLock)
 {
 	bool *pressedShift = keyInfo.vkCode == VK_RSHIFT ? &shiftRightPressed : &shiftLeftPressed;
 	bool *otherShift = keyInfo.vkCode == VK_RSHIFT ? &shiftLeftPressed : &shiftRightPressed;
@@ -727,7 +727,7 @@ boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	return true;
 }
 
-void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKeyUp) {
+void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 	if (isKeyUp) {
 		if (keyInfo.scanCode == scanCodeMod3R) {
 			level3modRightPressed = false;
@@ -762,7 +762,7 @@ void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKe
 	}
 }
 
-void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKeyUp) {
+void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 	if (isKeyUp) {
 		if (keyInfo.scanCode == scanCodeMod4L) {
 			level4modLeftPressed = false;
@@ -806,7 +806,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKe
  * updates system key and layerLock states; writes key
  * returns `true` if next hook should be called, `false` otherwise
  **/
-bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState, bool isKeyUp)
+bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp)
 {
 	bool continueExecution = handleSystemKey(keyInfo, isKeyUp);
 	if (!continueExecution) return false;
@@ -851,7 +851,7 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, struct ModState *modState,
 __declspec(dllexport)
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 {
-	static struct ModState modState = {false, false, false};
+	static ModState modState = {false, false, false};
 	KBDLLHOOKSTRUCT keyInfo;
 
 	if (
@@ -872,9 +872,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		if (!continueExecution) return -1;
 	}
 
-
+	// Shift + Pause
 	if (code == HC_ACTION && wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && modState.shift) {
-		// Shift + Pause
 		toggleBypassMode();
 		return -1;
 	}
