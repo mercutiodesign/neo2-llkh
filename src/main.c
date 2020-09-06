@@ -59,7 +59,6 @@ bool mod4LAsTab = false;             // if true, hitting Mod4L alone sends Tab
  * True if no mapping should be done
  */
 bool bypassMode = false;
-extern void toggleBypassMode();
 
 /**
  * States of some keys and shift lock.
@@ -313,6 +312,21 @@ void initLayout()
 		mappingTableLevel4Special[47] = VK_RETURN;
 	}
 	mappingTableLevel4Special[57] = '0';
+}
+
+void toggleBypassMode()
+{
+	bypassMode = !bypassMode;
+
+	HINSTANCE hInstance = GetModuleHandle(NULL);
+	HICON icon;
+	if (bypassMode)
+		icon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON_DISABLED));
+	else
+		icon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON));
+
+	trayicon_change_icon(icon);
+	printf("%i bypass mode \n", bypassMode);
 }
 
 /**
@@ -821,7 +835,6 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool i
 		return false;
 	} else if (keyInfo.flags == 1) {
 		return true;
-		// return CallNextHookEx(NULL, code, wparam, lparam);
 	} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
 		return false;
 	} else if (level == 3 && handleLayer3SpecialCases(keyInfo)) {
@@ -959,21 +972,6 @@ void exitApplication()
 {
 	trayicon_remove();
 	PostQuitMessage(0);
-}
-
-void toggleBypassMode()
-{
-	bypassMode = !bypassMode;
-
-	HINSTANCE hInstance = GetModuleHandle(NULL);
-	HICON icon;
-	if (bypassMode)
-		icon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON_DISABLED));
-	else
-		icon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON));
-
-	trayicon_change_icon(icon);
-	printf("%i bypass mode \n", bypassMode);
 }
 
 bool fileExists(LPCSTR szPath)
