@@ -84,6 +84,8 @@ bool altLeftPressed = false;
 bool winLeftPressed = false;
 bool winRightPressed = false;
 
+ModState modState = { false, false, false };
+
 /**
  * Mapping tables for four levels.
  * They will be defined in initLayout().
@@ -646,14 +648,14 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 	);
 }
 
-unsigned getLevel(ModState *modState) {
+unsigned getLevel() {
 	unsigned level = 1;
 
-	if (modState->shift != shiftLockActive) // (modState.shift) XOR (shiftLockActive)
+	if (modState.shift != shiftLockActive) // (modState.shift) XOR (shiftLockActive)
 		level = 2;
-	if (modState->mod3)
+	if (modState.mod3)
 		level = (supportLevels5and6 && level == 2) ? 5 : 3;
-	if (modState->mod4 != level4LockActive)
+	if (modState.mod4 != level4LockActive)
 		level = (supportLevels5and6 && level == 3) ? 6 : 4;
 
 	return level;
@@ -662,13 +664,13 @@ unsigned getLevel(ModState *modState) {
 /**
  * returns `true` if execution shall be continued, `false` otherwise
  **/
-boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, ModState *modState, WPARAM wparam, bool ignoreShiftCapsLock)
+boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, WPARAM wparam, bool ignoreShiftCapsLock)
 {
 	bool *pressedShift = keyInfo.vkCode == VK_RSHIFT ? &shiftRightPressed : &shiftLeftPressed;
 	bool *otherShift = keyInfo.vkCode == VK_RSHIFT ? &shiftLeftPressed : &shiftRightPressed;
 
 	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
-		modState->shift = false;
+		modState.shift = false;
 		*pressedShift = false;
 
 		if (*otherShift && !ignoreShiftCapsLock) {
@@ -683,7 +685,7 @@ boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, ModState *modState, WPARAM wpara
 		sendUp(keyInfo.vkCode, keyInfo.scanCode, false);
 		return false;
 	}	else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
-		modState->shift = true;
+		modState.shift = true;
 		*pressedShift = true;
 		sendDown(keyInfo.vkCode, keyInfo.scanCode, false);
 		return false;
@@ -742,11 +744,11 @@ boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	return true;
 }
 
-void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
+void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	if (isKeyUp) {
 		if (keyInfo.scanCode == scanCodeMod3R) {
 			level3modRightPressed = false;
-			modState->mod3 = level3modLeftPressed | level3modRightPressed;
+			modState.mod3 = level3modLeftPressed | level3modRightPressed;
 			if (mod3RAsReturn && level3modRightAndNoOtherKeyPressed) {
 				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod3_R
 				sendDownUp(VK_RETURN, 28, true); // send Return
@@ -754,7 +756,7 @@ void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 			}
 		} else { // scanCodeMod3L (CapsLock)
 			level3modLeftPressed = false;
-			modState->mod3 = level3modLeftPressed | level3modRightPressed;
+			modState.mod3 = level3modLeftPressed | level3modRightPressed;
 			if (capsLockAsEscape && level3modLeftAndNoOtherKeyPressed) {
 				sendUp(VK_CAPITAL, 58, false); // release Mod3_R
 				sendDownUp(VK_ESCAPE, 1, true); // send Escape
@@ -773,11 +775,11 @@ void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 			if (capsLockAsEscape)
 				level3modLeftAndNoOtherKeyPressed = true;
 		}
-		modState->mod3 = level3modLeftPressed | level3modRightPressed;
+		modState.mod3 = level3modLeftPressed | level3modRightPressed;
 	}
 }
 
-void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
+void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	if (isKeyUp) {
 		if (keyInfo.scanCode == scanCodeMod4L) {
 			level4modLeftPressed = false;
@@ -788,7 +790,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod4_L
 				sendDownUp(VK_TAB, 15, true); // send Tab
 				level4modLeftAndNoOtherKeyPressed = false;
-				modState->mod4 = level4modLeftPressed | level4modRightPressed;
+				modState.mod4 = level4modLeftPressed | level4modRightPressed;
 				return;
 			}
 		} else { // scanCodeMod4R
@@ -798,7 +800,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 				printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
 			}
 		}
-		modState->mod4 = level4modLeftPressed | level4modRightPressed;
+		modState.mod4 = level4modLeftPressed | level4modRightPressed;
 	}
 
 	else { // keyDown
@@ -813,7 +815,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 					to change nothing, so we simply send keyup here.  */
 			sendUp(VK_RMENU, 56, false);
 		}
-		modState->mod4 = level4modLeftPressed | level4modRightPressed;
+		modState.mod4 = level4modLeftPressed | level4modRightPressed;
 	}
 }
 
@@ -821,18 +823,18 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
  * updates system key and layerLock states; writes key
  * returns `true` if next hook should be called, `false` otherwise
  **/
-bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp)
+bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 {
 	bool continueExecution = handleSystemKey(keyInfo, isKeyUp);
 	if (!continueExecution) return false;
 
-	unsigned level = getLevel(modState);
+	unsigned level = getLevel();
 
 	if (isMod3(keyInfo)) {
-		handleMod3Key(keyInfo, modState, isKeyUp);
+		handleMod3Key(keyInfo, isKeyUp);
 		return false;
 	} else if (isMod4(keyInfo)) {
-		handleMod4Key(keyInfo, modState, isKeyUp);
+		handleMod4Key(keyInfo, isKeyUp);
 		return false;
 	} else if (keyInfo.flags == 1) {
 		return true;
@@ -865,7 +867,6 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool i
 __declspec(dllexport)
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 {
-	static ModState modState = {false, false, false};
 	KBDLLHOOKSTRUCT keyInfo;
 
 	if (
@@ -882,7 +883,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	}
 
 	if (code == HC_ACTION && isShift(keyInfo)) {
-		bool continueExecution = handleShiftKey(keyInfo, &modState, wparam, bypassMode);
+		bool continueExecution = handleShiftKey(keyInfo, wparam, bypassMode);
 		if (!continueExecution) return -1;
 	}
 
@@ -907,7 +908,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	if (code == HC_ACTION && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP)) {
 		logKeyEvent("key up", keyInfo);
 
-		bool callNext = updateStatesAndWriteKey(keyInfo, &modState, true);
+		bool callNext = updateStatesAndWriteKey(keyInfo, true);
 		if (!callNext) return -1;
 	} else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
 		printf("\n");
@@ -917,7 +918,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		level3modRightAndNoOtherKeyPressed = false;
 		level4modLeftAndNoOtherKeyPressed = false;
 
-		bool callNext = updateStatesAndWriteKey(keyInfo, &modState, false);
+		bool callNext = updateStatesAndWriteKey(keyInfo, false);
 		if (!callNext) return -1;
 	}
 
