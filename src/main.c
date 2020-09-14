@@ -536,30 +536,30 @@ bool isShift(KBDLLHOOKSTRUCT keyInfo)
 bool isMod3(KBDLLHOOKSTRUCT keyInfo)
 {
 	return keyInfo.scanCode == scanCodeMod3L
-		|| keyInfo.scanCode == scanCodeMod3R;
+	    || keyInfo.scanCode == scanCodeMod3R;
 }
 
 bool isMod4(KBDLLHOOKSTRUCT keyInfo)
 {
 	return keyInfo.scanCode == scanCodeMod4L
-		|| keyInfo.vkCode == VK_RMENU;
+	    || keyInfo.vkCode == VK_RMENU;
 }
 
 bool isSystemKeyPressed()
 {
 	return ctrlLeftPressed || ctrlRightPressed
-		|| altLeftPressed
-		|| winLeftPressed || winRightPressed;
+	    || altLeftPressed
+	    || winLeftPressed || winRightPressed;
 }
 
 bool isLetter(TCHAR key)
 {
 	return (key >= 65 && key <= 90  // A-Z
-		 || key >= 97 && key <= 122 // a-z
-		 || key == L'ä' || key == L'ö'
-		 || key == L'ü' || key == L'ß'
-		 || key == L'Ä' || key == L'Ö'
-		 || key == L'Ü' || key == L'ẞ');
+	     || key >= 97 && key <= 122 // a-z
+	     || key == L'ä' || key == L'ö'
+	     || key == L'ü' || key == L'ß'
+	     || key == L'Ä' || key == L'Ö'
+	     || key == L'Ü' || key == L'ẞ');
 }
 
 void toggleShiftLock()
@@ -638,7 +638,7 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 			//keyName = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
 	}
 	char *shiftLockCapsLockInfo = shiftLockActive ? " [shift lock active]"
-								: (capsLockActive ? " [caps lock active]" : "");
+						: (capsLockActive ? " [caps lock active]" : "");
 	char *level4LockInfo = level4LockActive ? " [level4 lock active]" : "";
 	char *vkPacket = (desc=="injected" && keyInfo.vkCode == VK_PACKET) ? " (VK_PACKET)" : "";
 	printf(
