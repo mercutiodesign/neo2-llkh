@@ -146,6 +146,45 @@ void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars)
 	}
 }
 
+void initLevel4SpecialCases() {
+	for (int i = 0; i < LEN; i++)
+		mappingTableLevel4Special[i] = 0;
+
+	mappingTableLevel4Special[16] = VK_PRIOR;
+
+	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
+		mappingTableLevel4Special[17] = VK_NEXT;
+		mappingTableLevel4Special[18] = VK_UP;
+		mappingTableLevel4Special[19] = VK_BACK;
+		mappingTableLevel4Special[20] = VK_DELETE;
+	} else {
+		mappingTableLevel4Special[17] = VK_BACK;
+		mappingTableLevel4Special[18] = VK_UP;
+		mappingTableLevel4Special[19] = VK_DELETE;
+		mappingTableLevel4Special[20] = VK_NEXT;
+	}
+
+	mappingTableLevel4Special[30] = VK_HOME;
+	mappingTableLevel4Special[31] = VK_LEFT;
+	mappingTableLevel4Special[32] = VK_DOWN;
+	mappingTableLevel4Special[33] = VK_RIGHT;
+	mappingTableLevel4Special[34] = VK_END;
+
+	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
+		mappingTableLevel4Special[44] = VK_INSERT;
+		mappingTableLevel4Special[45] = VK_TAB;
+		mappingTableLevel4Special[46] = VK_RETURN;
+		mappingTableLevel4Special[47] = VK_ESCAPE;
+	} else {
+		mappingTableLevel4Special[44] = VK_ESCAPE;
+		mappingTableLevel4Special[45] = VK_TAB;
+		mappingTableLevel4Special[46] = VK_INSERT;
+		mappingTableLevel4Special[47] = VK_RETURN;
+	}
+
+	mappingTableLevel4Special[57] = '0';
+}
+
 void initLayout()
 {
 	// initialize the mapping tables
@@ -274,44 +313,7 @@ void initLayout()
 	mappingTableLevel2[8] = 0x20AC;  // €
 
 	// level4 special cases
-	for (int i = 0; i < LEN; i++)
-		mappingTableLevel4Special[i] = 0;
-
-	mappingTableLevel4Special[16] = VK_PRIOR;
-	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0)
-	{
-		mappingTableLevel4Special[17] = VK_NEXT;
-		mappingTableLevel4Special[18] = VK_UP;
-		mappingTableLevel4Special[19] = VK_BACK;
-		mappingTableLevel4Special[20] = VK_DELETE;
-	}
-	else
-	{
-		mappingTableLevel4Special[17] = VK_BACK;
-		mappingTableLevel4Special[18] = VK_UP;
-		mappingTableLevel4Special[19] = VK_DELETE;
-		mappingTableLevel4Special[20] = VK_NEXT;
-	}
-	mappingTableLevel4Special[30] = VK_HOME;
-	mappingTableLevel4Special[31] = VK_LEFT;
-	mappingTableLevel4Special[32] = VK_DOWN;
-	mappingTableLevel4Special[33] = VK_RIGHT;
-	mappingTableLevel4Special[34] = VK_END;
-	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0)
-	{
-		mappingTableLevel4Special[44] = VK_INSERT;
-		mappingTableLevel4Special[45] = VK_TAB;
-		mappingTableLevel4Special[46] = VK_RETURN;
-		mappingTableLevel4Special[47] = VK_ESCAPE;
-	}
-	else
-	{
-		mappingTableLevel4Special[44] = VK_ESCAPE;
-		mappingTableLevel4Special[45] = VK_TAB;
-		mappingTableLevel4Special[46] = VK_INSERT;
-		mappingTableLevel4Special[47] = VK_RETURN;
-	}
-	mappingTableLevel4Special[57] = '0';
+	initLevel4SpecialCases();
 }
 
 void toggleBypassMode()
@@ -319,11 +321,9 @@ void toggleBypassMode()
 	bypassMode = !bypassMode;
 
 	HINSTANCE hInstance = GetModuleHandle(NULL);
-	HICON icon;
-	if (bypassMode)
-		icon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON_DISABLED));
-	else
-		icon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON));
+	HICON icon = bypassMode
+		? LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON_DISABLED))
+		: LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON));
 
 	trayicon_change_icon(icon);
 	printf("%i bypass mode \n", bypassMode);
@@ -357,10 +357,8 @@ TCHAR mapScanCodeToChar(unsigned level, char in)
 DWORD dwFlagsFromKeyInfo(KBDLLHOOKSTRUCT keyInfo)
 {
 	DWORD dwFlags = 0;
-	if (keyInfo.flags & LLKHF_EXTENDED)
-		dwFlags |= KEYEVENTF_EXTENDEDKEY;
-	if (keyInfo.flags & LLKHF_UP)
-		dwFlags |= KEYEVENTF_KEYUP;
+	if (keyInfo.flags & LLKHF_EXTENDED) dwFlags |= KEYEVENTF_EXTENDEDKEY;
+	if (keyInfo.flags & LLKHF_UP) dwFlags |= KEYEVENTF_KEYUP;
 	return dwFlags;
 }
 
@@ -536,30 +534,30 @@ bool isShift(KBDLLHOOKSTRUCT keyInfo)
 bool isMod3(KBDLLHOOKSTRUCT keyInfo)
 {
 	return keyInfo.scanCode == scanCodeMod3L
-			|| keyInfo.scanCode == scanCodeMod3R;
+		|| keyInfo.scanCode == scanCodeMod3R;
 }
 
 bool isMod4(KBDLLHOOKSTRUCT keyInfo)
 {
 	return keyInfo.scanCode == scanCodeMod4L
-			|| keyInfo.vkCode == VK_RMENU;
+		|| keyInfo.vkCode == VK_RMENU;
 }
 
 bool isSystemKeyPressed()
 {
 	return ctrlLeftPressed || ctrlRightPressed
-			|| altLeftPressed
-			|| winLeftPressed || winRightPressed;
+		|| altLeftPressed
+		|| winLeftPressed || winRightPressed;
 }
 
 bool isLetter(TCHAR key)
 {
 	return (key >= 65 && key <= 90  // A-Z
-			 || key >= 97 && key <= 122  // a-z
-			 || key == L'ä' || key == L'ö'
-			 || key == L'ü' || key == L'ß'
-			 || key == L'Ä' || key == L'Ö'
-			 || key == L'Ü' || key == L'ẞ');
+		 || key >= 97 && key <= 122 // a-z
+		 || key == L'ä' || key == L'ö'
+		 || key == L'ü' || key == L'ß'
+		 || key == L'Ä' || key == L'Ö'
+		 || key == L'Ü' || key == L'ẞ');
 }
 
 void toggleShiftLock()
@@ -638,17 +636,20 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 			//keyName = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
 	}
 	char *shiftLockCapsLockInfo = shiftLockActive ? " [shift lock active]"
-	                              : (capsLockActive ? " [caps lock active]" : "");
+								: (capsLockActive ? " [caps lock active]" : "");
 	char *level4LockInfo = level4LockActive ? " [level4 lock active]" : "";
 	char *vkPacket = (desc=="injected" && keyInfo.vkCode == VK_PACKET) ? " (VK_PACKET)" : "";
-	printf("%-13s | sc:%03u vk:0x%02X flags:0x%02X extra:%d %s%s%s%s\n", desc, keyInfo.scanCode, keyInfo.vkCode,
-	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockCapsLockInfo, level4LockInfo, vkPacket);
+	printf(
+		"%-13s | sc:%03u vk:0x%02X flags:0x%02X extra:%d %s%s%s%s\n",
+		desc, keyInfo.scanCode, keyInfo.vkCode, keyInfo.flags, keyInfo.dwExtraInfo,
+		keyName, shiftLockCapsLockInfo, level4LockInfo, vkPacket
+	);
 }
 
 unsigned getLevel(ModState *modState) {
 	unsigned level = 1;
-	if (modState->shift != shiftLockActive)
-		// (modState.shift and no shiftLockActive) XOR (shiftLockActive and no modState.shift)
+
+	if (modState->shift != shiftLockActive) // (modState.shift) XOR (shiftLockActive)
 		level = 2;
 	if (modState->mod3)
 		level = (supportLevels5and6 && level == 2) ? 5 : 3;
@@ -908,9 +909,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 
 		bool callNext = updateStatesAndWriteKey(keyInfo, &modState, true);
 		if (!callNext) return -1;
-
-	}	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
-    printf("\n");
+	} else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
+		printf("\n");
 		logKeyEvent("key down", keyInfo);
 
 		level3modLeftAndNoOtherKeyPressed = false;
@@ -979,7 +979,7 @@ bool fileExists(LPCSTR szPath)
 	DWORD dwAttrib = GetFileAttributesA(szPath);
 
 	return (dwAttrib != INVALID_FILE_ATTRIBUTES
-	        && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+	    && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 int main(int argc, char *argv[])
