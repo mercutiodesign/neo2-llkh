@@ -1,4 +1,6 @@
 *.o
 *.bak
 src/neo-llkh.exe
+src/main.exe
+.vscode
 

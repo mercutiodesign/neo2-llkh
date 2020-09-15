@@ -15,6 +15,11 @@
 #include "resources.h"
 #include <io.h>
 
+typedef struct ModState
+{
+	bool shift, mod3, mod4;
+} ModState;
+
 HHOOK keyhook = NULL;
 #define APPNAME "neo-llkh"
 #define LEN 103
@@ -54,7 +59,6 @@ bool mod4LAsTab = false;             // if true, hitting Mod4L alone sends Tab
  * True if no mapping should be done
  */
 bool bypassMode = false;
-extern void toggleBypassMode();
 
 /**
  * States of some keys and shift lock.
@@ -80,6 +84,8 @@ bool altLeftPressed = false;
 bool winLeftPressed = false;
 bool winRightPressed = false;
 
+ModState modState = { false, false, false };
+
 /**
  * Mapping tables for four levels.
  * They will be defined in initLayout().
@@ -90,7 +96,7 @@ TCHAR mappingTableLevel3[LEN];
 TCHAR mappingTableLevel4[LEN];
 TCHAR mappingTableLevel5[LEN];
 TCHAR mappingTableLevel6[LEN];
-
+CHAR mappingTableLevel4Special[LEN];
 
 void SetStdOutToNewConsole()
 {
@@ -140,6 +146,45 @@ void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars)
 			mappingTableOutput[i] = newChars[ptr-l1_lowercase];
 		}
 	}
+}
+
+void initLevel4SpecialCases() {
+	for (int i = 0; i < LEN; i++)
+		mappingTableLevel4Special[i] = 0;
+
+	mappingTableLevel4Special[16] = VK_PRIOR;
+
+	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
+		mappingTableLevel4Special[17] = VK_NEXT;
+		mappingTableLevel4Special[18] = VK_UP;
+		mappingTableLevel4Special[19] = VK_BACK;
+		mappingTableLevel4Special[20] = VK_DELETE;
+	} else {
+		mappingTableLevel4Special[17] = VK_BACK;
+		mappingTableLevel4Special[18] = VK_UP;
+		mappingTableLevel4Special[19] = VK_DELETE;
+		mappingTableLevel4Special[20] = VK_NEXT;
+	}
+
+	mappingTableLevel4Special[30] = VK_HOME;
+	mappingTableLevel4Special[31] = VK_LEFT;
+	mappingTableLevel4Special[32] = VK_DOWN;
+	mappingTableLevel4Special[33] = VK_RIGHT;
+	mappingTableLevel4Special[34] = VK_END;
+
+	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
+		mappingTableLevel4Special[44] = VK_INSERT;
+		mappingTableLevel4Special[45] = VK_TAB;
+		mappingTableLevel4Special[46] = VK_RETURN;
+		mappingTableLevel4Special[47] = VK_ESCAPE;
+	} else {
+		mappingTableLevel4Special[44] = VK_ESCAPE;
+		mappingTableLevel4Special[45] = VK_TAB;
+		mappingTableLevel4Special[46] = VK_INSERT;
+		mappingTableLevel4Special[47] = VK_RETURN;
+	}
+
+	mappingTableLevel4Special[57] = '0';
 }
 
 void initLayout()
@@ -293,6 +338,22 @@ void initLayout()
 	}
 
 	mappingTableLevel2[8] = 0x20AC;  // €
+
+	// level4 special cases
+	initLevel4SpecialCases();
+}
+
+void toggleBypassMode()
+{
+	bypassMode = !bypassMode;
+
+	HINSTANCE hInstance = GetModuleHandle(NULL);
+	HICON icon = bypassMode
+		? LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON_DISABLED))
+		: LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON));
+
+	trayicon_change_icon(icon);
+	printf("%i bypass mode \n", bypassMode);
 }
 
 /**
@@ -316,13 +377,38 @@ TCHAR mapScanCodeToChar(unsigned level, char in)
 	}
 }
 
-void sendUnicodeChar(TCHAR key)
+/**
+ * Maps keyInfo flags (https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-kbdllhookstruct)
+ * to dwFlags for keybd_event (https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-keybd_event)
+ **/
+DWORD dwFlagsFromKeyInfo(KBDLLHOOKSTRUCT keyInfo)
+{
+	DWORD dwFlags = 0;
+	if (keyInfo.flags & LLKHF_EXTENDED) dwFlags |= KEYEVENTF_EXTENDEDKEY;
+	if (keyInfo.flags & LLKHF_UP) dwFlags |= KEYEVENTF_KEYUP;
+	return dwFlags;
+}
+
+void sendDown(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
+	keybd_event(vkCode, scanCode, (isExtendedKey ? KEYEVENTF_EXTENDEDKEY : 0), 0);
+}
+
+void sendUp(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
+	keybd_event(vkCode, scanCode, (isExtendedKey ? KEYEVENTF_EXTENDEDKEY : 0) | KEYEVENTF_KEYUP, 0);
+}
+
+void sendDownUp(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
+	sendDown(vkCode, scanCode, isExtendedKey);
+	sendUp(vkCode, scanCode, isExtendedKey);
+}
+
+void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 {
 	KEYBDINPUT kb={0};
 	INPUT Input={0};
 
 	kb.wScan = key;
-	kb.dwFlags = KEYEVENTF_UNICODE;
+	kb.dwFlags = KEYEVENTF_UNICODE | dwFlagsFromKeyInfo(keyInfo);
 	Input.type = INPUT_KEYBOARD;
 	Input.ki = kb;
 	SendInput(1, &Input, sizeof(Input));
@@ -330,7 +416,6 @@ void sendUnicodeChar(TCHAR key)
 
 /**
  * Sends a char using emulated keyboard input
- *
  * This works for most cases, but not for dead keys etc
  **/
 void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
@@ -349,7 +434,7 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 		// shift key won't be sent.
 		//
 		// Furthermore, use unicode for number keys.
-		sendUnicodeChar(key);
+		sendUnicodeChar(key, keyInfo);
 	} else {
 		keyInfo.vkCode = keyScanResult;
 		char modifiers = keyScanResult >> 8;
@@ -362,27 +447,27 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 			alt = false;
 		}
 
-		if (altgr)
-			keybd_event(VK_RMENU, 0, 0, 0);
-		if (ctrl)
-			keybd_event(VK_CONTROL, 0, 0, 0);
-		if (alt)
-			keybd_event(VK_MENU, 0, 0, 0); // ALT
-		if (shift)
-			keybd_event(VK_SHIFT, 0, 0, 0);
+		if (altgr) sendDown(VK_RMENU, 56, false);
+		if (ctrl) sendDown(VK_CONTROL, 29, false);
+		if (alt) sendDown(VK_MENU, 56, false); // ALT
+		if (shift) sendDown(VK_SHIFT, 42, false);
 
-		keyInfo.vkCode = keyScanResult;
-		keybd_event(keyInfo.vkCode, keyInfo.scanCode, keyInfo.flags, keyInfo.dwExtraInfo);
+		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlagsFromKeyInfo(keyInfo), keyInfo.dwExtraInfo);
 
-		if (altgr)
-			keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
-		if (ctrl)
-			keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
-		if (alt)
-			keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0); // ALT
-		if (shift)
-			keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
+		if (altgr) sendUp(VK_RMENU, 56, false);
+		if (ctrl) sendUp(VK_CONTROL, 29, false);
+		if (alt) sendUp(VK_MENU, 56, false); // ALT
+		if (shift) sendUp(VK_SHIFT, 42, false);
 	}
+}
+
+/**
+ * Send a usually dead key by injecting space after (on down).
+ * This will add an actual space if actual dead key is followed by "dead" key with this
+ **/
+void commitDeadKey(KBDLLHOOKSTRUCT keyInfo)
+{
+	if (!(keyInfo.flags & LLKHF_UP)) sendDownUp(VK_SPACE, 57, false);
 }
 
 bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo)
@@ -397,7 +482,6 @@ bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		default:
 			return false;
 	}
-
 }
 
 bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
@@ -408,7 +492,7 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 			return true;
 		case 20:
 			sendChar(L'^', keyInfo);
-			keybd_event(VK_SPACE, 0, 0, 0);
+			commitDeadKey(keyInfo);
 			return true;
 		case 27:
 			sendChar(L'̷', keyInfo);  // bar (diakritischer Schrägstrich)
@@ -416,25 +500,27 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		case 31:
 			if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
 				sendChar(L'`', keyInfo);
-				keybd_event(VK_SPACE, 0, 0, 0);
+				commitDeadKey(keyInfo);
 				return true;
 			}
 			return false;
 		case 48:
 			if (strcmp(layout, "kou") != 0 && strcmp(layout, "vou") != 0) {
 				sendChar(L'`', keyInfo);
-				keybd_event(VK_SPACE, 0, 0, 0);
+				commitDeadKey(keyInfo);
 				return true;
 			}
 			return false;
 		default:
 			return false;
 	}
-
 }
 
 bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
+	// return if left Ctrl was injected by AltGr
+	if (keyInfo.scanCode == 541) return -1;
+
 	switch(keyInfo.scanCode) {
 		case 13:
 			sendChar(L'¨', keyInfo);  // diaeresis, umlaut
@@ -449,10 +535,16 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 
 	// A second level 4 mapping table for special (non-unicode) keys.
 	// Maybe this could be included in the global TCHAR mapping table or level 4!?
-	byte bScan = 0;
-	CHAR mappingTable[LEN];
-	for (int i = 0; i < LEN; i++)
-		mappingTable[i] = 0;
+	BYTE bScan = 0;
+
+	if (mappingTableLevel4Special[keyInfo.scanCode] != 0) {
+		if (mappingTableLevel4Special[keyInfo.scanCode] == VK_RETURN)
+			bScan = 0x1c;
+		else if (mappingTableLevel4Special[keyInfo.scanCode] == VK_INSERT)
+			bScan = 0x52;
+
+		// extended flag (bit 0) is necessary for selecting text with shift + arrow
+		keybd_event(mappingTableLevel4Special[keyInfo.scanCode], bScan, dwFlagsFromKeyInfo(keyInfo) | KEYEVENTF_EXTENDEDKEY, 0);
 
 	mappingTable[16] = VK_PRIOR;
 	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
@@ -519,6 +611,7 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 			keybd_event(mappingTable[keyInfo.scanCode], 0, 0x01, 0);
 //		else
 //			keybd_event(mappingTable[keyInfo.scanCode], bScan, 0, 0);
+
 		return true;
 	}
 	return false;
@@ -553,11 +646,23 @@ bool isSystemKeyPressed()
 bool isLetter(TCHAR key)
 {
 	return (key >= 65 && key <= 90  // A-Z
-	        || key >= 97 && key <= 122  // a-z
-	        || key == L'ä' || key == L'ö'
-	        || key == L'ü' || key == L'ß'
-	        || key == L'Ä' || key == L'Ö'
-	        || key == L'Ü' || key == L'ẞ');
+	     || key >= 97 && key <= 122 // a-z
+	     || key == L'ä' || key == L'ö'
+	     || key == L'ü' || key == L'ß'
+	     || key == L'Ä' || key == L'Ö'
+	     || key == L'Ü' || key == L'ẞ');
+}
+
+void toggleShiftLock()
+{
+	shiftLockActive = !shiftLockActive;
+	printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
+}
+
+void toggleCapsLock()
+{
+	capsLockActive = !capsLockActive;
+	printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
 }
 
 void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
@@ -624,284 +729,291 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 			//keyName = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
 	}
 	char *shiftLockCapsLockInfo = shiftLockActive ? " [shift lock active]"
-	                              : (capsLockActive ? " [caps lock active]" : "");
+						: (capsLockActive ? " [caps lock active]" : "");
 	char *level4LockInfo = level4LockActive ? " [level4 lock active]" : "";
 	char *vkPacket = (desc=="injected" && keyInfo.vkCode == VK_PACKET) ? " (VK_PACKET)" : "";
-	printf("%-10s sc %u vk 0x%x 0x%x %d %s%s%s%s\n", desc, keyInfo.scanCode, keyInfo.vkCode,
-	       keyInfo.flags, keyInfo.dwExtraInfo, keyName, shiftLockCapsLockInfo, level4LockInfo, vkPacket);
+	printf(
+		"%-13s | sc:%03u vk:0x%02X flags:0x%02X extra:%d %s%s%s%s\n",
+		desc, keyInfo.scanCode, keyInfo.vkCode, keyInfo.flags, keyInfo.dwExtraInfo,
+		keyName, shiftLockCapsLockInfo, level4LockInfo, vkPacket
+	);
+}
+
+unsigned getLevel() {
+	unsigned level = 1;
+
+	if (modState.shift != shiftLockActive) // (modState.shift) XOR (shiftLockActive)
+		level = 2;
+	if (modState.mod3)
+		level = (supportLevels5and6 && level == 2) ? 5 : 3;
+	if (modState.mod4 != level4LockActive)
+		level = (supportLevels5and6 && level == 3) ? 6 : 4;
+
+	return level;
+}
+
+/**
+ * returns `true` if execution shall be continued, `false` otherwise
+ **/
+boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, WPARAM wparam, bool ignoreShiftCapsLock)
+{
+	bool *pressedShift = keyInfo.vkCode == VK_RSHIFT ? &shiftRightPressed : &shiftLeftPressed;
+	bool *otherShift = keyInfo.vkCode == VK_RSHIFT ? &shiftLeftPressed : &shiftRightPressed;
+
+	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
+		modState.shift = false;
+		*pressedShift = false;
+
+		if (*otherShift && !ignoreShiftCapsLock) {
+			if (shiftLockEnabled) {
+				sendDownUp(VK_CAPITAL, 58, false);
+				toggleShiftLock();
+			} else if (capsLockEnabled) {
+				sendDownUp(VK_CAPITAL, 58, false);
+				toggleCapsLock();
+			}
+		}
+		sendUp(keyInfo.vkCode, keyInfo.scanCode, false);
+		return false;
+	}	else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
+		modState.shift = true;
+		*pressedShift = true;
+		sendDown(keyInfo.vkCode, keyInfo.scanCode, false);
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * returns `true` if no systemKey was pressed -> continue execution, `false` otherwise
+ **/
+boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
+	bool newStateValue = !isKeyUp;
+	DWORD dwFlags = isKeyUp ? KEYEVENTF_KEYUP : 0;
+
+	// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
+	if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
+		if (swapLeftCtrlAndLeftAlt) {
+			altLeftPressed = newStateValue;
+			keybd_event(VK_LMENU, 56, dwFlags, 0);
+		} else if (swapLeftCtrlLeftAltAndLeftWin) {
+			winLeftPressed = newStateValue;
+			keybd_event(VK_LWIN, 91, dwFlags, 0);
+		} else {
+			ctrlLeftPressed = newStateValue;
+			keybd_event(VK_LCONTROL, 29, dwFlags, 0);
+		}
+		return false;
+	} else if (keyInfo.vkCode == VK_RCONTROL) {
+		ctrlRightPressed = newStateValue;
+		keybd_event(VK_RCONTROL, 29, dwFlags, 0);
+	} else if (keyInfo.vkCode == VK_LMENU) {
+		if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
+			ctrlLeftPressed = newStateValue;
+			keybd_event(VK_LCONTROL, 29, dwFlags, 0);
+		} else {
+			altLeftPressed = newStateValue;
+			keybd_event(VK_LMENU, 56, dwFlags, 0);
+		}
+		return false;
+	} else if (keyInfo.vkCode == VK_LWIN) {
+		if (swapLeftCtrlLeftAltAndLeftWin) {
+			altLeftPressed = newStateValue;
+			keybd_event(VK_LMENU, 56, dwFlags, 0);
+		} else {
+			winLeftPressed = newStateValue;
+			keybd_event(VK_LWIN, 91, dwFlags, 0);
+		}
+		return false;
+	} else if (keyInfo.vkCode == VK_RWIN) {
+		winRightPressed = newStateValue;
+		keybd_event(VK_RWIN, 92, dwFlags, 0);
+		return false;
+	}
+
+	return true;
+}
+
+void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
+	if (isKeyUp) {
+		if (keyInfo.scanCode == scanCodeMod3R) {
+			level3modRightPressed = false;
+			modState.mod3 = level3modLeftPressed | level3modRightPressed;
+			if (mod3RAsReturn && level3modRightAndNoOtherKeyPressed) {
+				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod3_R
+				sendDownUp(VK_RETURN, 28, true); // send Return
+				level3modRightAndNoOtherKeyPressed = false;
+			}
+		} else { // scanCodeMod3L (CapsLock)
+			level3modLeftPressed = false;
+			modState.mod3 = level3modLeftPressed | level3modRightPressed;
+			if (capsLockAsEscape && level3modLeftAndNoOtherKeyPressed) {
+				sendUp(VK_CAPITAL, 58, false); // release Mod3_R
+				sendDownUp(VK_ESCAPE, 1, true); // send Escape
+				level3modLeftAndNoOtherKeyPressed = false;
+			}
+		}
+	}
+
+	else { // keyDown
+		if (keyInfo.scanCode == scanCodeMod3R) {
+			level3modRightPressed = true;
+			if (mod3RAsReturn)
+				level3modRightAndNoOtherKeyPressed = true;
+		} else { // VK_CAPITAL (CapsLock)
+			level3modLeftPressed = true;
+			if (capsLockAsEscape)
+				level3modLeftAndNoOtherKeyPressed = true;
+		}
+		modState.mod3 = level3modLeftPressed | level3modRightPressed;
+	}
+}
+
+void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
+	if (isKeyUp) {
+		if (keyInfo.scanCode == scanCodeMod4L) {
+			level4modLeftPressed = false;
+			if (level4modRightPressed && level4LockEnabled) {
+				level4LockActive = !level4LockActive;
+				printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+			} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
+				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod4_L
+				sendDownUp(VK_TAB, 15, true); // send Tab
+				level4modLeftAndNoOtherKeyPressed = false;
+				modState.mod4 = level4modLeftPressed | level4modRightPressed;
+				return;
+			}
+		} else { // scanCodeMod4R
+			level4modRightPressed = false;
+			if (level4modLeftPressed && level4LockEnabled) {
+				level4LockActive = !level4LockActive;
+				printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+			}
+		}
+		modState.mod4 = level4modLeftPressed | level4modRightPressed;
+	}
+
+	else { // keyDown
+		if (keyInfo.scanCode == scanCodeMod4L) {
+			level4modLeftPressed = true;
+			if (mod4LAsTab)
+				level4modLeftAndNoOtherKeyPressed = !(level4modRightPressed || level3modLeftPressed || level3modRightPressed);
+		} else { // scanCodeMod4R
+			level4modRightPressed = true;
+			/* ALTGR triggers two keys: LCONTROL and RMENU
+					we don't want to have any of those two here effective but return -1 seems
+					to change nothing, so we simply send keyup here.  */
+			sendUp(VK_RMENU, 56, false);
+		}
+		modState.mod4 = level4modLeftPressed | level4modRightPressed;
+	}
+}
+
+/**
+ * updates system key and layerLock states; writes key
+ * returns `true` if next hook should be called, `false` otherwise
+ **/
+bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
+{
+	bool continueExecution = handleSystemKey(keyInfo, isKeyUp);
+	if (!continueExecution) return false;
+
+	unsigned level = getLevel();
+
+	if (isMod3(keyInfo)) {
+		handleMod3Key(keyInfo, isKeyUp);
+		return false;
+	} else if (isMod4(keyInfo)) {
+		handleMod4Key(keyInfo, isKeyUp);
+		return false;
+	} else if (keyInfo.flags == 1) {
+		return true;
+	} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
+		return false;
+	} else if (level == 3 && handleLayer3SpecialCases(keyInfo)) {
+		return false;
+	} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
+		return false;
+	} else if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) {
+		// Numeric keypad -> don't remap
+	} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
+		// numbers 0 to 9 -> don't remap
+	} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
+		TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
+		if (capsLockActive && (level == 1 || level == 2) && isLetter(key)) {
+			key = mapScanCodeToChar(level==1 ? 2 : 1, keyInfo.scanCode);
+		} if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
+			// if key must be mapped
+			int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
+			printf("%-13s | sc:%03d %c->%c [0x%04X] (level %u)\n", " mapped", keyInfo.scanCode, character, key, key, level);
+			sendChar(key, keyInfo);
+			return false;
+		}
+	}
+
+	return true;
 }
 
 __declspec(dllexport)
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 {
-	static bool shiftPressed = false;
-	static bool mod3Pressed = false;
-	static bool mod4Pressed = false;
-
 	KBDLLHOOKSTRUCT keyInfo;
-	if (code == HC_ACTION
-	    && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP || wparam == WM_SYSKEYDOWN
-	        || wparam == WM_KEYDOWN)) {
+
+	if (
+		code == HC_ACTION
+		&& (wparam == WM_SYSKEYUP || wparam == WM_KEYUP || wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)
+	) {
 		keyInfo = *((KBDLLHOOKSTRUCT *) lparam);
 
 		if (keyInfo.flags & LLKHF_INJECTED) {
 			// process injected events like normal, because most probably we are injecting them
-			logKeyEvent("injected", keyInfo);
+			logKeyEvent((keyInfo.flags & LLKHF_UP) ? "injected up" : "injected down", keyInfo);
 			return CallNextHookEx(NULL, code, wparam, lparam);
 		}
 	}
 
-	if (code == HC_ACTION && wparam == WM_KEYDOWN &&
-		shiftPressed && keyInfo.scanCode == 70) {
-		// Shift + ScrollLock
+	if (code == HC_ACTION && isShift(keyInfo)) {
+		bool continueExecution = handleShiftKey(keyInfo, wparam, bypassMode);
+		if (!continueExecution) return -1;
+	}
+
+	// Shift + Pause
+	if (code == HC_ACTION && wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && modState.shift) {
+
 		toggleBypassMode();
 		return -1;
 	}
 
-	if (bypassMode)
+	if (bypassMode) {
+		if (code == HC_ACTION && keyInfo.vkCode == VK_CAPITAL && !(keyInfo.flags & LLKHF_UP)) {
+			// synchronize with capsLock state during bypass
+			if (shiftLockEnabled) {
+				toggleShiftLock();
+			} else if (capsLockEnabled) {
+				toggleCapsLock();
+			}
+		}
 		return CallNextHookEx(NULL, code, wparam, lparam);
+	}
 
 	if (code == HC_ACTION && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP)) {
 		logKeyEvent("key up", keyInfo);
 
-		if (isShift(keyInfo)) {
-			shiftPressed = false;  // correct?
-			if (keyInfo.vkCode == VK_RSHIFT) {
-				shiftRightPressed = false;
-				if (shiftLeftPressed) {
-					if (shiftLockEnabled) {
-						shiftLockActive = !shiftLockActive;
-						printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
-					} else if (capsLockEnabled) {
-						capsLockActive = !capsLockActive;
-						printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
-					}
-				}
-				keybd_event(VK_RSHIFT, 54, KEYEVENTF_KEYUP, 0);
-			} else {
-				shiftLeftPressed = false;
-				if (shiftRightPressed) {
-					if (shiftLockEnabled) {
-						shiftLockActive = !shiftLockActive;
-						printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
-					} else if (capsLockEnabled) {
-						capsLockActive = !capsLockActive;
-						printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
-					}
-				}
-				keybd_event(VK_LSHIFT, 42, KEYEVENTF_KEYUP, 0);
-			}
-			return -1;
-		} else if (isMod3(keyInfo)) {
-			if (keyInfo.scanCode == scanCodeMod3R) {
-				level3modRightPressed = false;
-				mod3Pressed = level3modLeftPressed | level3modRightPressed;
-				if (mod3RAsReturn && level3modRightAndNoOtherKeyPressed) {
-					// release Mod3_R
-					keybd_event(keyInfo.vkCode, 0, KEYEVENTF_KEYUP, 0);
-					// send Return
-					keybd_event(VK_RETURN, 0, 0x01, 0);
-					level3modRightAndNoOtherKeyPressed = false;
-					return -1;
-				}
-			} else {  // scanCodeMod3L (CapsLock)
-				level3modLeftPressed = false;
-				mod3Pressed = level3modLeftPressed | level3modRightPressed;
-				if (capsLockAsEscape && level3modLeftAndNoOtherKeyPressed) {
-					// release CapsLock/Mod3_L
-					keybd_event(VK_CAPITAL, 0, KEYEVENTF_KEYUP, 0);
-					// send Escape
-					keybd_event(VK_ESCAPE, 0, 0x01, 0);
-					level3modLeftAndNoOtherKeyPressed = false;
-					return -1;
-				}
-			}
-			return -1;
-		} else if (isMod4(keyInfo)) {
-			if (keyInfo.scanCode == scanCodeMod4L) {
-				level4modLeftPressed = false;
-				if (level4modRightPressed && level4LockEnabled) {
-					level4LockActive = !level4LockActive;
-					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
-				} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
-					// release Mod4_L
-					keybd_event(keyInfo.vkCode, 0, KEYEVENTF_KEYUP, 0);
-					// send Tab
-					keybd_event(VK_TAB, 0, 0x01, 0);
-					level4modLeftAndNoOtherKeyPressed = false;
-					return -1;
-				}
-			} else {  // scanCodeMod4R
-				level4modRightPressed = false;
-				if (level4modLeftPressed && level4LockEnabled) {
-					level4LockActive = !level4LockActive;
-					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
-				}
-			}
-			mod4Pressed = level4modLeftPressed | level4modRightPressed;
-			return -1;
-		}
-
-		// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
-		if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
-			if (swapLeftCtrlAndLeftAlt) {
-				altLeftPressed = false;
-				keybd_event(VK_LMENU, 0, KEYEVENTF_KEYUP, 0);
-			} else if (swapLeftCtrlLeftAltAndLeftWin) {
-				winLeftPressed = false;
-				keybd_event(VK_LWIN, 0, KEYEVENTF_KEYUP, 0);
-			} else {
-				ctrlLeftPressed = false;
-				keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
-			}
-			return -1;
-		} else if (keyInfo.vkCode == VK_RCONTROL) {
-			ctrlRightPressed = false;
-		} else if (keyInfo.vkCode == VK_LMENU) {
-			if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
-				ctrlLeftPressed = false;
-				keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
-			} else {
-				altLeftPressed = false;
-				keybd_event(VK_LMENU, 0, KEYEVENTF_KEYUP, 0);
-			}
-			return -1;
-		} else if (keyInfo.vkCode == VK_LWIN) {
-			if (swapLeftCtrlLeftAltAndLeftWin) {
-				altLeftPressed = false;
-				keybd_event(VK_LMENU, 0, KEYEVENTF_KEYUP, 0);
-			} else {
-				winLeftPressed = false;
-				keybd_event(VK_LWIN, 0, KEYEVENTF_KEYUP, 0);
-			}
-			return -1;
-		} else if (keyInfo.vkCode == VK_RWIN) {
-			winRightPressed = false;
-		}
-	}
-
-	else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
-        printf("\n");
+		bool callNext = updateStatesAndWriteKey(keyInfo, true);
+		if (!callNext) return -1;
+	} else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
+		printf("\n");
 		logKeyEvent("key down", keyInfo);
 
 		level3modLeftAndNoOtherKeyPressed = false;
 		level3modRightAndNoOtherKeyPressed = false;
 		level4modLeftAndNoOtherKeyPressed = false;
 
-		// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
-		if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
-			if (swapLeftCtrlAndLeftAlt) {
-				altLeftPressed = true;
-				keybd_event(VK_LMENU, 0, 0, 0);
-			} else if (swapLeftCtrlLeftAltAndLeftWin) {
-				winLeftPressed = true;
-				keybd_event(VK_LWIN, 0, 0, 0);
-			} else {
-				ctrlLeftPressed = true;
-				keybd_event(VK_LCONTROL, 0, 0, 0);
-			}
-			return -1;
-		} else if (keyInfo.vkCode == VK_RCONTROL) {
-			ctrlRightPressed = true;
-		} else if (keyInfo.vkCode == VK_LMENU) {
-			if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
-				ctrlLeftPressed = true;
-				keybd_event(VK_LCONTROL, 0, 0, 0);
-			} else {
-				altLeftPressed = true;
-				keybd_event(VK_LMENU, 0, 0, 0);
-			}
-			return -1;
-		} else if (keyInfo.vkCode == VK_LWIN) {
-			if (swapLeftCtrlLeftAltAndLeftWin) {
-				altLeftPressed = true;
-				keybd_event(VK_LMENU, 0, 0, 0);
-			} else {
-				winLeftPressed = true;
-				keybd_event(VK_LWIN, 0, 0, 0);
-			}
-			return -1;
-		} else if (keyInfo.vkCode == VK_RWIN) {
-			winRightPressed = true;
-		}
-
-		unsigned level = 1;
-		if (shiftPressed != shiftLockActive)
-			// (shiftPressed and no shiftLockActive) or (shiftLockActive and no shiftPressed) (XOR)
-			level = 2;
-		if (mod3Pressed)
-			if (supportLevels5and6 && level == 2)
-				level = 5;
-			else
-				level = 3;
-		if (mod4Pressed != level4LockActive)
-			if (supportLevels5and6 && level == 3)
-				level = 6;
-			else
-				level = 4;
-
-		if (isShift(keyInfo)) {
-			shiftPressed = true;
-			if (keyInfo.vkCode == VK_RSHIFT) {
-				shiftRightPressed = true;
-				keybd_event(VK_RSHIFT, 0, 0, 0);
-			} else {
-				shiftLeftPressed = true;
-				keybd_event(VK_LSHIFT, 0, 0, 0);
-			}
-			return -1;
-		} else if (isMod3(keyInfo)) {
-			if (keyInfo.scanCode == scanCodeMod3R) {
-				level3modRightPressed = true;
-				if (mod3RAsReturn)
-					level3modRightAndNoOtherKeyPressed = true;
-			} else {  // VK_CAPITAL (CapsLock)
-				level3modLeftPressed = true;
-				if (capsLockAsEscape)
-					level3modLeftAndNoOtherKeyPressed = true;
-			}
-			mod3Pressed = level3modLeftPressed | level3modRightPressed;
-			return -1;
-		} else if (isMod4(keyInfo)) {
-			if (keyInfo.scanCode == scanCodeMod4L) {
-				level4modLeftPressed = true;
-				if (mod4LAsTab)
-					level4modLeftAndNoOtherKeyPressed = true;
-			} else { // scanCodeMod4R
-				level4modRightPressed = true;
-				/* ALTGR triggers two keys: LCONTROL and RMENU
-				   we don't want to have any of those two here effective but return -1 seems
-				   to change nothing, so we simply send keyup here.  */
-				keybd_event(VK_RMENU, 0, KEYEVENTF_KEYUP, 0);
-			}
-			mod4Pressed = level4modLeftPressed | level4modRightPressed;
-			return -1;
-		} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
-			return -1;
-		} else if (level == 3 && handleLayer3SpecialCases(keyInfo)) {
-			return -1;
-		} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
-			return -1;
-		} else if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) {
-			// Numeric keypad -> don't remap
-		} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
-			// numbers 0 to 9 -> don't remap
-		} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
-			TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
-			if (capsLockActive && (level == 1 || level == 2) && isLetter(key))
-				key = mapScanCodeToChar(level==1 ? 2 : 1, keyInfo.scanCode);
-			if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
-				// if key must be mapped
-				int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
-				printf("Mapped %d %c->%c [0x%04X] (level %u)\n", keyInfo.scanCode, character, key, key, level);
-				//BYTE state[256];
-				//GetKeyboardState(state);
-				sendChar(key, keyInfo);
-				//SetKeyboardState(state);
-				return -1;
-			}
-		}
+		bool callNext = updateStatesAndWriteKey(keyInfo, false);
+		if (!callNext) return -1;
 	}
+
 	/* Passes the hook information to the next hook procedure in the current hook chain.
 	 * 1st Parameter hhk - Optional
 	 * 2nd Parameter nCode - The next hook procedure uses this code to determine how to process the hook information.
@@ -955,27 +1067,12 @@ void exitApplication()
 	PostQuitMessage(0);
 }
 
-void toggleBypassMode()
-{
-	bypassMode = !bypassMode;
-
-	HINSTANCE hInstance = GetModuleHandle(NULL);
-	HICON icon;
-	if (bypassMode)
-		icon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON_DISABLED));
-	else
-		icon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON));
-
-	trayicon_change_icon(icon);
-	printf("%i bypass mode \n", bypassMode);
-}
-
 bool fileExists(LPCSTR szPath)
 {
 	DWORD dwAttrib = GetFileAttributesA(szPath);
 
 	return (dwAttrib != INVALID_FILE_ATTRIBUTES
-	        && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+	    && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 int main(int argc, char *argv[])

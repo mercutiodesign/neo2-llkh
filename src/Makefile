@@ -18,5 +18,5 @@ neo-llkh.exe: $(OBJECTS)
 %.o: %.rc
 	$(WINDRES) -i $^ -o $@
 
-clean: 
+clean:
 	@rm -f $(OBJECTS) neo-llkh.exe
