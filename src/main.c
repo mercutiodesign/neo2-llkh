@@ -1,7 +1,7 @@
 #define UNICODE
 /**
  * Alternative Windows driver for the Neo2 based keyboard layouts:
- * Neo2, (www.neo-layout.org)
+ * Neo2, (https://www.neo-layout.org)
  * AdNW, AdNWzjßf, KOY (www.adnw.de)
  * bone (https://web.archive.org/web/20180721192908/http://wiki.neo-layout.org/wiki/Bone)
  * qwertz (https://de.wikipedia.org/wiki/QWERTZ-Tastaturbelegung)
@@ -185,6 +185,19 @@ void initLevel4SpecialCases() {
 	}
 
 	mappingTableLevel4Special[57] = '0';
+
+	// numeric keypad
+	mappingTableLevel4Special[71] = VK_HOME;
+	mappingTableLevel4Special[72] = VK_UP;
+	mappingTableLevel4Special[73] = VK_PRIOR;
+	mappingTableLevel4Special[75] = VK_LEFT;
+	mappingTableLevel4Special[76] = VK_ESCAPE; // not sure about this one
+	mappingTableLevel4Special[77] = VK_RIGHT;
+	mappingTableLevel4Special[79] = VK_END;
+	mappingTableLevel4Special[80] = VK_DOWN;
+	mappingTableLevel4Special[81] = VK_NEXT;
+	mappingTableLevel4Special[82] = VK_INSERT;
+	mappingTableLevel4Special[83] = VK_DELETE;
 }
 
 void initLayout()
@@ -203,21 +216,35 @@ void initLayout()
 
 	// same for all layouts
 	wcscpy(mappingTableLevel1 +  2, L"1234567890-`");
+	wcscpy(mappingTableLevel1 + 71, L"789-456+1230.");
+	mappingTableLevel1[69] = 0x0009; // tabulator (not sure about this one)
 
 	wcscpy(mappingTableLevel2 + 41, L"̌");  // key to the left of the "1" key
 	wcscpy(mappingTableLevel2 +  2, L"°§ℓ»«$€„“”—̧");
+	wcscpy(mappingTableLevel2 + 71, L"✔✘†-♣€‣+♦♥♠␣."); // numeric keypad
+	mappingTableLevel2[69] = 0x0009; // tabulator (not sure about this one)
+	// https://neo-layout.org/grafik/aufsteller/neo20-aufsteller.pdf
 
 	wcscpy(mappingTableLevel3 + 41, L"^");
 	wcscpy(mappingTableLevel3 +  2, L"¹²³›‹¢¥‚‘’—̊");
 	wcscpy(mappingTableLevel3 + 16, L"…_[]^!<>=&ſ̷");
 	wcscpy(mappingTableLevel3 + 30, L"\\/{}*?()-:@");
 	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';");
+	wcscpy(mappingTableLevel3 + 71, L"↕↑↨−←:→±↔↓⇌%,"); // numeric keypad
+	wcscpy(mappingTableLevel3 + 53, L"÷");  // /-key on numeric keypad
+	wcscpy(mappingTableLevel3 + 55, L"⋅");  // *-key on numeric keypad
+	wcscpy(mappingTableLevel3 + 69, L"=");  // num-lock-key
 
 	wcscpy(mappingTableLevel4 + 41, L"̇");
 	wcscpy(mappingTableLevel4 +  2, L"ªº№⋮·£¤0/*-¨");
 	wcscpy(mappingTableLevel4 + 21, L"¡789+−˝");
 	wcscpy(mappingTableLevel4 + 35, L"¿456,.");
 	wcscpy(mappingTableLevel4 + 49, L":123;");
+	wcscpy(mappingTableLevel4 + 53, L"∕");  // /-key on numeric keypad
+	wcscpy(mappingTableLevel4 + 55, L"×");  // *-key on numeric keypad
+	wcscpy(mappingTableLevel4 + 74, L"∖");  // --key on numeric keypad
+	wcscpy(mappingTableLevel4 + 78, L"∓");  // +-key on numeric keypad
+	wcscpy(mappingTableLevel4 + 69, L"≠");  // num-lock-key
 
 	// layout dependent
 	if (strcmp(layout, "adnw") == 0) {
@@ -294,10 +321,21 @@ void initLayout()
 		wcscpy(mappingTableLevel5 +  2, L"₁₂₃♂♀⚥ϰ⟨⟩₀?῾");
 		wcscpy(mappingTableLevel5 + 27, L"᾿");
 		mappingTableLevel5[57] = 0x00a0;  // space = no-break space
+		wcscpy(mappingTableLevel5 + 71, L"≪∩≫⊖⊂⊶⊃⊕≤∪≥‰′"); // numeric keypad
+
+		wcscpy(mappingTableLevel5 + 53, L"⌀");  // /-key on numeric keypad
+		wcscpy(mappingTableLevel5 + 55, L"⊙");  // *-key on numeric keypad
+		wcscpy(mappingTableLevel5 + 69, L"≈");  // num-lock-key
+
 		wcscpy(mappingTableLevel6 + 41, L"̣");
 		wcscpy(mappingTableLevel6 +  2, L"¬∨∧⊥∡∥→∞∝⌀?̄");
 		wcscpy(mappingTableLevel6 + 27, L"˘");
 		mappingTableLevel6[57] = 0x202f;  // space = narrow no-break space
+		wcscpy(mappingTableLevel6 + 71, L"⌈⋂⌉∸⊆⊷⊇∔⌊⋃⌋□"); // numeric keypad
+		mappingTableLevel6[83] = 0x02dd; // double acute accent (not sure about this one)
+		wcscpy(mappingTableLevel6 + 53, L"∣");  // /-key on numeric keypad
+		wcscpy(mappingTableLevel6 + 55, L"⊗");  // *-key on numeric keypad
+		wcscpy(mappingTableLevel6 + 69, L"≡");  // num-lock-key
 	}
 
 	// if quote/ä is the right level 3 modifier, copy symbol of quote/ä key to backslash/# key
@@ -844,8 +882,6 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 		return false;
 	} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
 		return false;
-	} else if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) {
-		// Numeric keypad -> don't remap
 	} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
 		// numbers 0 to 9 -> don't remap
 	} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
