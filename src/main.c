@@ -185,6 +185,19 @@ void initLevel4SpecialCases() {
 	}
 
 	mappingTableLevel4Special[57] = '0';
+
+	// numeric keypad
+	mappingTableLevel4Special[71] = VK_HOME;
+	mappingTableLevel4Special[72] = VK_UP;
+	mappingTableLevel4Special[73] = VK_PRIOR;
+	mappingTableLevel4Special[75] = VK_LEFT;
+	mappingTableLevel4Special[76] = VK_ESCAPE; // not sure about this one
+	mappingTableLevel4Special[77] = VK_RIGHT;
+	mappingTableLevel4Special[79] = VK_END;
+	mappingTableLevel4Special[80] = VK_DOWN;
+	mappingTableLevel4Special[81] = VK_NEXT;
+	mappingTableLevel4Special[82] = VK_INSERT;
+	mappingTableLevel4Special[83] = VK_DELETE;
 }
 
 void initLayout()
@@ -546,72 +559,6 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		// extended flag (bit 0) is necessary for selecting text with shift + arrow
 		keybd_event(mappingTableLevel4Special[keyInfo.scanCode], bScan, dwFlagsFromKeyInfo(keyInfo) | KEYEVENTF_EXTENDEDKEY, 0);
 
-	mappingTable[16] = VK_PRIOR;
-	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
-		mappingTable[17] = VK_NEXT;
-		mappingTable[18] = VK_UP;
-		mappingTable[19] = VK_BACK;
-		mappingTable[20] = VK_DELETE;
-	} else {
-		mappingTable[17] = VK_BACK;
-		mappingTable[18] = VK_UP;
-		mappingTable[19] = VK_DELETE;
-		mappingTable[20] = VK_NEXT;
-	}
-	mappingTable[30] = VK_HOME;
-	mappingTable[31] = VK_LEFT;
-	mappingTable[32] = VK_DOWN;
-	mappingTable[33] = VK_RIGHT;
-	mappingTable[34] = VK_END;
-	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
-		mappingTable[44] = VK_INSERT;
-		mappingTable[45] = VK_TAB;
-		mappingTable[46] = VK_RETURN;
-		mappingTable[47] = VK_ESCAPE;
-	} else {
-		mappingTable[44] = VK_ESCAPE;
-		mappingTable[45] = VK_TAB;
-		mappingTable[46] = VK_INSERT;
-		mappingTable[47] = VK_RETURN;
-	}
-	mappingTable[57] = '0';
-
-	// numeric keypad
-	mappingTable[71] = VK_HOME;
-	mappingTable[72] = VK_UP;
-	mappingTable[73] = VK_PRIOR;
-	mappingTable[75] = VK_LEFT;
-	mappingTable[76] = VK_ESCAPE; // not sure about this one
-	mappingTable[77] = VK_RIGHT;
-	mappingTable[79] = VK_END;
-	mappingTable[80] = VK_DOWN;
-	mappingTable[81] = VK_NEXT;
-	mappingTable[82] = VK_INSERT;
-	mappingTable[83] = VK_DELETE;
-
-	if (mappingTable[keyInfo.scanCode] != 0) {
-//		if (mappingTable[keyInfo.scanCode] == VK_RETURN)
-//			bScan = 0x1c;
-//		else if (mappingTable[keyInfo.scanCode] == VK_INSERT)
-//			bScan = 0x52;  // or 0x52e0?
-		// If arrow key, page up/down, home or end,
-		// send flag 0x01 (bit 0 = extended).
-		// This in necessary for selecting text with shift + arrow.
-//		if (mappingTable[keyInfo.scanCode]==VK_LEFT
-//			|| mappingTable[keyInfo.scanCode]==VK_RIGHT
-//			|| mappingTable[keyInfo.scanCode]==VK_UP
-//			|| mappingTable[keyInfo.scanCode]==VK_DOWN
-//			|| mappingTable[keyInfo.scanCode]==VK_PRIOR
-//			|| mappingTable[keyInfo.scanCode]==VK_NEXT
-//			|| mappingTable[keyInfo.scanCode]==VK_HOME
-//			|| mappingTable[keyInfo.scanCode]==VK_END
-//			|| mappingTable[keyInfo.scanCode]==VK_INSERT
-//			|| mappingTable[keyInfo.scanCode]==VK_RETURN)
-			// always send extended flag (maybe this fixes mousepad issues)
-			keybd_event(mappingTable[keyInfo.scanCode], 0, 0x01, 0);
-//		else
-//			keybd_event(mappingTable[keyInfo.scanCode], bScan, 0, 0);
-
 		return true;
 	}
 	return false;
@@ -935,8 +882,6 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 		return false;
 	} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
 		return false;
-	} else if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) {
-		// Numeric keypad -> don't remap
 	} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
 		// numbers 0 to 9 -> don't remap
 	} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
