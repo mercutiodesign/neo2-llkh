@@ -35,7 +35,9 @@ HHOOK keyhook = NULL;
  * Some global settings.
  * These values can be set in a configuration file (settings.ini)
  */
-char layout[100];                    // keyboard layout (default: neo)
+char layout[100];                    // keyboard layout by name (default: neo)
+char customLayout[65];               // custom keyboard layout (32 symbols but probably more than 32 bytes)
+TCHAR customLayoutWcs[33];           // custom keyboard layout in UTF-16 (32 symbols)
 bool debugWindow = false;            // show debug output in a separate console window
 bool quoteAsMod3R = false;           // use quote/ä as right level 3 modifier
 bool returnAsMod3R = false;          // use return as right level 3 modifier
@@ -132,6 +134,31 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 		default:
 			return FALSE;
 	}
+}
+
+/**
+ * Convert UTF-8 (char) string to UTF-16 (TCHAR) string.
+ */
+void str2wcs(TCHAR *dest, char *src, size_t n)
+{
+	TCHAR result[n];
+	int i = 0;
+	int pos = 0;
+
+	for (int i = 0; pos < n && src[i] != 0; i++) {
+		int c = src[i]>0 ? (int)src[i] : (int)src[i]+256;
+		switch (c) {
+			case 0xc3: continue;
+			case 0xa4: result[pos] = 0xe4; break; // ä
+			case 0xb6: result[pos] = 0xf6; break; // ö
+			case 0xbc: result[pos] = 0xfc; break; // ü
+			case 0x9f: result[pos] = 0xdf; break; // ß
+			default: result[pos] = c;
+		}
+		pos++;
+	}
+	result[pos] = 0;
+	wcsncpy(dest, result, pos);
 }
 
 void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars)
@@ -298,6 +325,18 @@ void initLayout()
 		wcscpy(mappingTableLevel1 + 16, L"xvlcwkhgfqß´");
 		wcscpy(mappingTableLevel1 + 30, L"uiaeosnrtdy");
 		wcscpy(mappingTableLevel1 + 44, L"üöäpzbm,.j");
+	}
+
+	// use custom layout if it was defined
+	if (wcslen(customLayoutWcs) != 0) {
+		if (wcslen(customLayoutWcs) == 32) {
+			// custom layout
+			wcsncpy(mappingTableLevel1 + 16, customLayoutWcs, 11);
+			wcsncpy(mappingTableLevel1 + 30, customLayoutWcs + 11, 11);
+			wcsncpy(mappingTableLevel1 + 44, customLayoutWcs + 22, 10);
+		} else {
+			printf("\ncustomLayout given but its length is %i (expected: 32).\n", wcslen(customLayoutWcs));
+		}
 	}
 
 	// same for all layouts
@@ -1044,6 +1083,8 @@ int main(int argc, char *argv[])
 
 		GetPrivateProfileStringA("Settings", "layout", "neo", layout, 100, ini);
 
+		GetPrivateProfileStringA("Settings", "customLayout", "", customLayout, 65, ini);
+
 		GetPrivateProfileStringA("Settings", "symmetricalLevel3Modifiers", "0", returnValue, 100, ini);
 		quoteAsMod3R = (strcmp(returnValue, "1") == 0);
 
@@ -1098,6 +1139,7 @@ int main(int argc, char *argv[])
 
 		printf("\nEinstellungen aus %s:\n", ini);
 		printf(" Layout: %s\n", layout);
+		printf(" customLayout: %s\n", customLayout);
 		printf(" symmetricalLevel3Modifiers: %d\n", quoteAsMod3R);
 		printf(" returnKeyAsMod3R: %d\n", returnAsMod3R);
 		printf(" tabKeyAsMod4L: %d\n", tabAsMod4L);
@@ -1139,9 +1181,9 @@ int main(int argc, char *argv[])
 				param = strtok(argv[i], delimiter);
 				if (param != NULL) {
 					value = strtok(NULL, delimiter);
-					if (value != NULL) {
-						//printf("\n%s ist %s", param, value);
-					}
+					//if (value != NULL) {
+					//	printf("\n%s ist %s", param, value);
+					//}
 				}
 
 				if (strcmp(param, "debugWindow") == 0) {
@@ -1156,6 +1198,12 @@ int main(int argc, char *argv[])
 					if (value != NULL) {
 						strncpy(layout, value, 100);
 						printf("\n Layout: %s", layout);
+					}
+
+				} else if (strcmp(param, "customLayout") == 0) {
+					if (value != NULL) {
+						strncpy(customLayout, value, 65);
+						printf("\n Custom layout: %s", customLayout);
 					}
 
 				} else if (strcmp(param, "symmetricalLevel3Modifiers") == 0) {
@@ -1218,7 +1266,8 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-	printf("\n\n");
+	// tranform possibly UTF-8 encoded custom layout string to UTF-16
+	str2wcs(customLayoutWcs, customLayout, 33);
 
 	if (quoteAsMod3R)
 		// use ä/quote key instead of #/backslash key as right level 3 modifier
