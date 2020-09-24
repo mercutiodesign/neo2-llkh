@@ -12,6 +12,7 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 * [KOY](http://adnw.de/index.php?n=Main.SeitlicheNachbaranschl%c3%a4ge)
 * [VOU](https://maximilian-schillinger.de/vou-layout.html) (mein persönliches Layout auf Basis von KOY)
 * [QWERTZ](https://de.wikipedia.org/wiki/QWERTZ-Tastaturbelegung)
+* Andere Layouts können über eine Konfigurationsdatei definiert werden.
 
 ## Funktionsumfang
 * Alle 6 Ebenen (auf den Ebenen 5 und 6 funktionieren nicht alle Zeichen)
@@ -31,7 +32,7 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 ### Was nicht funktioniert
 
 * Diese Tasten sollten eigentlich tote Tasten sein, geben aber direkt die entsprechenden Symbole aus: `̷  ¨ ˝`
-* Die Ebenen 3-6 für den Nummernblock fehlen.
+* Die Ebenen 2-6 für den Nummernblock funktionieren nur teilweise.
 
 ### Bekannte Fehler
 
@@ -51,11 +52,18 @@ Starte einfach die selbst kompilierte `neo-llkh.exe` aus dem `src`-Ordner oder l
 Alle Einstellungen werden in der mitgelieferten `settings.ini` gemacht. Es wird immer die ini-Datei aus dem gleichen Ordner wie die `neo-llkh.exe` verwendet. Um eine Funktion zu aktivieren, setze den entsprechenden Wert auf `1`. `0` bedeutet deaktiviert.
 
 ### Layout
-Wenn du ein anderers Layout verwenden möchtest, ändere den `layout`-Eintrag in der `settings.ini`, zum Beispiel:
+Wenn du ein anderes Layout verwenden möchtest, ändere den `layout`-Eintrag in der `settings.ini`, zum Beispiel:
 
 `layout=adnw`
 
 Folgende Layout-Parameter werden erkannt: `neo`, `adnw`, `adnwzjf` (=AdNWzjßf), `bone`, `koy`, `kou`, `vou`, `qwertz`.
+
+### Benutzerdefiniertes Layout
+Ein eigenes Layout kann wie folgt definiert werden, hier am Beispiel von *Cry*:
+
+`customLayout=jluaqwbdgyzßcrieomntshvxüäöpf,.k`
+
+Dabei entsprechen die ersten 12 Zeichen den Tasten `Q` bis `+`, die nächsten 11 Zeichen `A` bis `Ä` und die letzten 11 Zeichen `Y` bis `-`.
 
 ### Einrasten von Ebene 2
 Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktiviert werden. Dafür muss der Wert von `shiftLockEnabled` in der `settings.ini` auf `1` gesetzt werden:
