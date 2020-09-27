@@ -99,6 +99,7 @@ TCHAR mappingTableLevel4[LEN];
 TCHAR mappingTableLevel5[LEN];
 TCHAR mappingTableLevel6[LEN];
 CHAR mappingTableLevel4Special[LEN];
+TCHAR numpadSlashKey[7];
 
 void SetStdOutToNewConsole()
 {
@@ -211,9 +212,26 @@ void initLevel4SpecialCases() {
 		mappingTableLevel4Special[47] = VK_RETURN;
 	}
 
-	mappingTableLevel4Special[57] = '0';
+	mappingTableLevel4Special[57] = '0'; // space bar
 
-	// numeric keypad
+	/** numeric keypad
+	 * --------------------
+	 * dec hex extended bit
+	 *  28  1C 1   Enter
+	 *  53  35 1   /
+	 *  55  37 0   *
+	 *  71  47 0   7 and Home
+	 *  74  4A 0   -
+	 *  75  4B 0   4 and Left
+	 *  76  4C 0   5
+	 *  77  4D 0   6 and Right
+	 *  78  4E 0   +
+	 *  79  4F 0   1 and End
+	 *  80  50 0   2 and Down
+	 *  81  51 0   3 and PgDn
+	 *  82  52 0   0 and Ins
+	 *  83  53 0   , and Del
+	 */
 	mappingTableLevel4Special[71] = VK_HOME;
 	mappingTableLevel4Special[72] = VK_UP;
 	mappingTableLevel4Special[73] = VK_PRIOR;
@@ -244,12 +262,12 @@ void initLayout()
 	// same for all layouts
 	wcscpy(mappingTableLevel1 +  2, L"1234567890-`");
 	wcscpy(mappingTableLevel1 + 71, L"789-456+1230.");
-	mappingTableLevel1[69] = 0x0009; // tabulator (not sure about this one)
+	mappingTableLevel1[69] = VK_TAB; // NumLock key → tabulator
 
 	wcscpy(mappingTableLevel2 + 41, L"̌");  // key to the left of the "1" key
 	wcscpy(mappingTableLevel2 +  2, L"°§ℓ»«$€„“”—̧");
 	wcscpy(mappingTableLevel2 + 71, L"✔✘†-♣€‣+♦♥♠␣."); // numeric keypad
-	mappingTableLevel2[69] = 0x0009; // tabulator (not sure about this one)
+	mappingTableLevel2[69] = VK_TAB; // NumLock key → tabulator
 	// https://neo-layout.org/grafik/aufsteller/neo20-aufsteller.pdf
 
 	wcscpy(mappingTableLevel3 + 41, L"^");
@@ -258,7 +276,6 @@ void initLayout()
 	wcscpy(mappingTableLevel3 + 30, L"\\/{}*?()-:@");
 	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';");
 	wcscpy(mappingTableLevel3 + 71, L"↕↑↨−←:→±↔↓⇌%,"); // numeric keypad
-	wcscpy(mappingTableLevel3 + 53, L"÷");  // /-key on numeric keypad
 	wcscpy(mappingTableLevel3 + 55, L"⋅");  // *-key on numeric keypad
 	wcscpy(mappingTableLevel3 + 69, L"=");  // num-lock-key
 
@@ -267,7 +284,6 @@ void initLayout()
 	wcscpy(mappingTableLevel4 + 21, L"¡789+−˝");
 	wcscpy(mappingTableLevel4 + 35, L"¿456,.");
 	wcscpy(mappingTableLevel4 + 49, L":123;");
-	wcscpy(mappingTableLevel4 + 53, L"∕");  // /-key on numeric keypad
 	wcscpy(mappingTableLevel4 + 55, L"×");  // *-key on numeric keypad
 	wcscpy(mappingTableLevel4 + 74, L"∖");  // --key on numeric keypad
 	wcscpy(mappingTableLevel4 + 78, L"∓");  // +-key on numeric keypad
@@ -342,6 +358,8 @@ void initLayout()
 	// same for all layouts
 	wcscpy(mappingTableLevel1 + 27, L"´");
 	wcscpy(mappingTableLevel2 + 27, L"~");
+	// slash key is special: it has the same scan code in the main block and the numpad
+	wcscpy(numpadSlashKey, L"//÷∕⌀∣");
 
 	// map letters of level 2
 	TCHAR * charsLevel2;
@@ -362,7 +380,6 @@ void initLayout()
 		mappingTableLevel5[57] = 0x00a0;  // space = no-break space
 		wcscpy(mappingTableLevel5 + 71, L"≪∩≫⊖⊂⊶⊃⊕≤∪≥‰′"); // numeric keypad
 
-		wcscpy(mappingTableLevel5 + 53, L"⌀");  // /-key on numeric keypad
 		wcscpy(mappingTableLevel5 + 55, L"⊙");  // *-key on numeric keypad
 		wcscpy(mappingTableLevel5 + 69, L"≈");  // num-lock-key
 
@@ -372,7 +389,6 @@ void initLayout()
 		mappingTableLevel6[57] = 0x202f;  // space = narrow no-break space
 		wcscpy(mappingTableLevel6 + 71, L"⌈⋂⌉∸⊆⊷⊇∔⌊⋃⌋□"); // numeric keypad
 		mappingTableLevel6[83] = 0x02dd; // double acute accent (not sure about this one)
-		wcscpy(mappingTableLevel6 + 53, L"∣");  // /-key on numeric keypad
 		wcscpy(mappingTableLevel6 + 55, L"⊗");  // *-key on numeric keypad
 		wcscpy(mappingTableLevel6 + 69, L"≡");  // num-lock-key
 	}
@@ -913,7 +929,8 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 	} else if (isMod4(keyInfo)) {
 		handleMod4Key(keyInfo, isKeyUp);
 		return false;
-	} else if (keyInfo.flags == 1) {
+	} else if (keyInfo.flags == LLKHF_EXTENDED && keyInfo.scanCode != 53) {
+		// handle numpad slash key (scanCode=53 + extended bit) later
 		return true;
 	} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
 		return false;
@@ -924,10 +941,18 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 	} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
 		// numbers 0 to 9 -> don't remap
 	} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
-		TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
+		TCHAR key;
+		if (keyInfo.flags == LLKHF_EXTENDED && keyInfo.scanCode == 53) {
+			// slash key ("/") on numpad
+			key = numpadSlashKey[level-1];
+			keyInfo.flags = 0;
+		} else {
+			key = mapScanCodeToChar(level, keyInfo.scanCode);
+		}
 		if (capsLockActive && (level == 1 || level == 2) && isLetter(key)) {
 			key = mapScanCodeToChar(level==1 ? 2 : 1, keyInfo.scanCode);
-		} if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
+		}
+		if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
 			// if key must be mapped
 			int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
 			printf("%-13s | sc:%03d %c->%c [0x%04X] (level %u)\n", " mapped", keyInfo.scanCode, character, key, key, level);
