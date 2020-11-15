@@ -929,7 +929,7 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 	} else if (isMod4(keyInfo)) {
 		handleMod4Key(keyInfo, isKeyUp);
 		return false;
-	} else if (keyInfo.flags == LLKHF_EXTENDED && keyInfo.scanCode != 53) {
+	} else if ((keyInfo.flags & LLKHF_EXTENDED) && keyInfo.scanCode != 53) {
 		// handle numpad slash key (scanCode=53 + extended bit) later
 		return true;
 	} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
@@ -942,7 +942,7 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 		// numbers 0 to 9 -> don't remap
 	} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
 		TCHAR key;
-		if (keyInfo.flags == LLKHF_EXTENDED && keyInfo.scanCode == 53) {
+		if ((keyInfo.flags & LLKHF_EXTENDED) && keyInfo.scanCode == 53) {
 			// slash key ("/") on numpad
 			key = numpadSlashKey[level-1];
 			keyInfo.flags = 0;
