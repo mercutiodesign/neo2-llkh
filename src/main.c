@@ -92,10 +92,10 @@ ModState modState = { false, false, false };
  * Mapping tables for four levels.
  * They will be defined in initLayout().
  */
-TCHAR mappingTableLevel1[LEN];
-TCHAR mappingTableLevel2[LEN];
-TCHAR mappingTableLevel3[LEN];
-TCHAR mappingTableLevel4[LEN];
+TCHAR mappingTableLevel1[LEN] = {0};
+TCHAR mappingTableLevel2[LEN] = {0};
+TCHAR mappingTableLevel3[LEN] = {0};
+TCHAR mappingTableLevel4[LEN] = {0};
 TCHAR mappingTableLevel5[LEN];
 TCHAR mappingTableLevel6[LEN];
 CHAR mappingTableLevel4Special[LEN];
@@ -177,8 +177,7 @@ void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars)
 }
 
 void initLevel4SpecialCases() {
-	for (int i = 0; i < LEN; i++)
-		mappingTableLevel4Special[i] = 0;
+	mappingTableLevel4Special = {0};
 
 	mappingTableLevel4Special[16] = VK_PRIOR;
 
@@ -247,16 +246,10 @@ void initLevel4SpecialCases() {
 
 void initLayout()
 {
-	// initialize the mapping tables
-	for (int i = 0; i < LEN; i++) {
-		mappingTableLevel1[i] = 0;
-		mappingTableLevel2[i] = 0;
-		mappingTableLevel3[i] = 0;
-		mappingTableLevel4[i] = 0;
-		if (supportLevels5and6) {
-			mappingTableLevel5[i] = 0;
-			mappingTableLevel6[i] = 0;
-		}
+	// initialize the mapping tables for levels 5 and 6
+	if (supportLevels5and6) {
+		mappingTableLevel5 = {0};
+		mappingTableLevel6 = {0};
 	}
 
 	// same for all layouts
