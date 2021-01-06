@@ -96,9 +96,9 @@ TCHAR mappingTableLevel1[LEN] = {0};
 TCHAR mappingTableLevel2[LEN] = {0};
 TCHAR mappingTableLevel3[LEN] = {0};
 TCHAR mappingTableLevel4[LEN] = {0};
-TCHAR mappingTableLevel5[LEN];
-TCHAR mappingTableLevel6[LEN];
-CHAR mappingTableLevel4Special[LEN];
+TCHAR mappingTableLevel5[LEN] = {0};
+TCHAR mappingTableLevel6[LEN] = {0};
+CHAR mappingTableLevel4Special[LEN] = {0};
 TCHAR numpadSlashKey[7];
 
 void SetStdOutToNewConsole()
@@ -177,8 +177,6 @@ void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars)
 }
 
 void initLevel4SpecialCases() {
-	mappingTableLevel4Special = {0};
-
 	mappingTableLevel4Special[16] = VK_PRIOR;
 
 	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
@@ -246,12 +244,6 @@ void initLevel4SpecialCases() {
 
 void initLayout()
 {
-	// initialize the mapping tables for levels 5 and 6
-	if (supportLevels5and6) {
-		mappingTableLevel5 = {0};
-		mappingTableLevel6 = {0};
-	}
-
 	// same for all layouts
 	wcscpy(mappingTableLevel1 +  2, L"1234567890-`");
 	wcscpy(mappingTableLevel1 + 71, L"789-456+1230.");
@@ -785,7 +777,7 @@ boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, WPARAM wparam, bool ignoreShiftC
  **/
 boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	bool newStateValue = !isKeyUp;
-	DWORD dwFlags = isKeyUp ? KEYEVENTF_KEYUP : 0;
+	DWORD dwFlags = isKeyUp ? KEYEVENTF_KEYUP : keyInfo.flags;
 
 	// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
 	if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
