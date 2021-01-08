@@ -249,7 +249,7 @@ void initLayout()
 	wcscpy(mappingTableLevel1 + 71, L"789-456+1230.");
 	mappingTableLevel1[69] = VK_TAB; // NumLock key → tabulator
 
-	wcscpy(mappingTableLevel2 + 41, L"̌");  // key to the left of the "1" key
+	mappingTableLevel2[41] = L'\u030C'; // key to the left of the "1" key, "Combining Caron"
 	wcscpy(mappingTableLevel2 +  2, L"°§ℓ»«$€„“”—̧");
 	wcscpy(mappingTableLevel2 + 71, L"✔✘†-♣€‣+♦♥♠␣."); // numeric keypad
 	mappingTableLevel2[69] = VK_TAB; // NumLock key → tabulator
@@ -257,15 +257,17 @@ void initLayout()
 
 	wcscpy(mappingTableLevel3 + 41, L"^");
 	wcscpy(mappingTableLevel3 +  2, L"¹²³›‹¢¥‚‘’—̊");
-	wcscpy(mappingTableLevel3 + 16, L"…_[]^!<>=&ſ̷");
+	wcscpy(mappingTableLevel3 + 16, L"…_[]^!<>=&ſ");
+	mappingTableLevel3[27] = L'\u0337'; // "Combining Short Solidus Overlay"
 	wcscpy(mappingTableLevel3 + 30, L"\\/{}*?()-:@");
 	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';");
 	wcscpy(mappingTableLevel3 + 71, L"↕↑↨−←:→±↔↓⇌%,"); // numeric keypad
 	wcscpy(mappingTableLevel3 + 55, L"⋅");  // *-key on numeric keypad
 	wcscpy(mappingTableLevel3 + 69, L"=");  // num-lock-key
 
-	wcscpy(mappingTableLevel4 + 41, L"̇");
-	wcscpy(mappingTableLevel4 +  2, L"ªº№⋮·£¤0/*-¨");
+	mappingTableLevel4[41] = L'\u0307'; // "Combining Dot Above"
+	wcscpy(mappingTableLevel4 +  2, L"ªº№⋮·£¤0/*-");
+	mappingTableLevel4[13] = L'\u00A8'; // "Diaresis"
 	wcscpy(mappingTableLevel4 + 21, L"¡789+−˝");
 	wcscpy(mappingTableLevel4 + 35, L"¿456,.");
 	wcscpy(mappingTableLevel4 + 49, L":123;");
@@ -359,17 +361,19 @@ void initLayout()
 		mapLevels_2_5_6(mappingTableLevel6, charsLevel6);
 
 		// add number row and dead key in upper letter row
-		wcscpy(mappingTableLevel5 + 41, L"̉");
-		wcscpy(mappingTableLevel5 +  2, L"₁₂₃♂♀⚥ϰ⟨⟩₀?῾");
-		wcscpy(mappingTableLevel5 + 27, L"᾿");
-		mappingTableLevel5[57] = 0x00a0;  // space = no-break space
+		mappingTableLevel5[41] = L'\u0309'; // "Combining Hook Above"
+		wcscpy(mappingTableLevel5 +  2, L"₁₂₃♂♀⚥ϰ⟨⟩₀?");
+		mappingTableLevel5[13] = L'\u1FFE'; // "Greek Dasia"
+		mappingTableLevel5[27] = L'\u1FBF'; // "Greek Psili"
+		mappingTableLevel5[57] = L'\u00A0'; // space = no-break space
 		wcscpy(mappingTableLevel5 + 71, L"≪∩≫⊖⊂⊶⊃⊕≤∪≥‰′"); // numeric keypad
 
 		wcscpy(mappingTableLevel5 + 55, L"⊙");  // *-key on numeric keypad
 		wcscpy(mappingTableLevel5 + 69, L"≈");  // num-lock-key
 
-		wcscpy(mappingTableLevel6 + 41, L"̣");
-		wcscpy(mappingTableLevel6 +  2, L"¬∨∧⊥∡∥→∞∝⌀?̄");
+		mappingTableLevel6[41] = L'\u0323'; // "Combining Dot Below"
+		wcscpy(mappingTableLevel6 +  2, L"¬∨∧⊥∡∥→∞∝⌀?");
+		mappingTableLevel6[13] = L'\u0304'; // "Combining Macron"
 		wcscpy(mappingTableLevel6 + 27, L"˘");
 		mappingTableLevel6[57] = 0x202f;  // space = narrow no-break space
 		wcscpy(mappingTableLevel6 + 71, L"⌈⋂⌉∸⊆⊷⊇∔⌊⋃⌋□"); // numeric keypad
@@ -527,10 +531,10 @@ bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
 	switch(keyInfo.scanCode) {
 		case 27:
-			sendChar(L'̃', keyInfo);  // perispomene (Tilde)
+			sendChar(L'\u0303', keyInfo);  // perispomene (Tilde)
 			return true;
 		case 41:
-			sendChar(L'̌', keyInfo);  // caron, wedge, háček (Hatschek)
+			sendChar(L'\u030C', keyInfo);  // caron, wedge, háček (Hatschek)
 			return true;
 		default:
 			return false;
@@ -541,14 +545,14 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
 	switch(keyInfo.scanCode) {
 		case 13:
-			sendChar(L'̊', keyInfo);  // overring
+			sendChar(L'\u030A', keyInfo);  // overring
 			return true;
 		case 20:
 			sendChar(L'^', keyInfo);
 			commitDeadKey(keyInfo);
 			return true;
 		case 27:
-			sendChar(L'̷', keyInfo);  // bar (diakritischer Schrägstrich)
+			sendChar(L'\u0337', keyInfo);  // bar (diakritischer Schrägstrich)
 			return true;
 		case 31:
 			if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
@@ -576,13 +580,13 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 
 	switch(keyInfo.scanCode) {
 		case 13:
-			sendChar(L'¨', keyInfo);  // diaeresis, umlaut
+			sendChar(L'\u00A8', keyInfo);  // diaeresis, umlaut
 			return true;
 		case 27:
-			sendChar(L'˝', keyInfo);  // double acute (doppelter Akut)
+			sendChar(L'\u02DD', keyInfo);  // double acute (doppelter Akut)
 			return true;
 		case 41:
-			sendChar(L'̇', keyInfo);  // dot above (Punkt, darüber)
+			sendChar(L'\u0307', keyInfo);  // dot above (Punkt, darüber)
 			return true;
 	}
 
