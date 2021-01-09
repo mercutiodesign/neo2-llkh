@@ -1046,7 +1046,9 @@ DWORD WINAPI hookThreadMain(void *user)
 	 * Retrieves a message from the calling thread's message queue.
 	 */
 	while (GetMessage(&msg, 0, 0, 0) > 0) {
-		TranslateMessage(&msg);
+		// Translates virtual-key messages into character messages.
+		// TranslateMessage(&msg);
+		// Dispatches a message to a window procedure.
 		DispatchMessage(&msg);
 	}
 
@@ -1074,6 +1076,8 @@ bool fileExists(LPCSTR szPath)
 
 int main(int argc, char *argv[])
 {
+	setbuf(stdout, NULL);
+
 	/**
 	* find settings.ini (in same folder as neo-llkh.exe)
 	*/
@@ -1303,7 +1307,6 @@ int main(int argc, char *argv[])
 
 	initLayout();
 
-	setbuf(stdout, NULL);
 
 	DWORD tid;
 
@@ -1328,12 +1331,5 @@ int main(int argc, char *argv[])
 	 */
 	HANDLE thread = CreateThread(0, 0, hookThreadMain, argv[0], 0, &tid);
 
-	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0) > 0) {
-		// Translates virtual-key messages into character messages.
-		TranslateMessage(&msg);
-		// Dispatches a message to a window procedure.
-		DispatchMessage(&msg);
-	}
 	return 0;
 }
