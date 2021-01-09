@@ -15,8 +15,7 @@
 #include "resources.h"
 #include <io.h>
 
-typedef struct ModState
-{
+typedef struct ModState {
 	bool shift, mod3, mod4;
 } ModState;
 
@@ -101,8 +100,7 @@ TCHAR mappingTableLevel6[LEN] = {0};
 CHAR mappingTableLevel4Special[LEN] = {0};
 TCHAR numpadSlashKey[7];
 
-void SetStdOutToNewConsole()
-{
+void SetStdOutToNewConsole() {
 	// allocate a console for this app
 	AllocConsole();
 	// redirect unbuffered STDOUT to the console
@@ -123,8 +121,7 @@ void SetStdOutToNewConsole()
 	}
 }
 
-BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
-{
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
 	switch (fdwCtrlType) {
 		// Handle the Ctrl-c signal.
 		case CTRL_C_EVENT:
@@ -140,8 +137,7 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 /**
  * Convert UTF-8 (char) string to UTF-16 (TCHAR) string.
  */
-void str2wcs(TCHAR *dest, char *src, size_t n)
-{
+void str2wcs(TCHAR *dest, char *src, size_t n) {
 	TCHAR result[n];
 	int i = 0;
 	int pos = 0;
@@ -162,8 +158,7 @@ void str2wcs(TCHAR *dest, char *src, size_t n)
 	wcsncpy(dest, result, pos);
 }
 
-void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars)
-{
+void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars) {
 	TCHAR * l1_lowercase = L"abcdefghijklmnopqrstuvwxyzäöüß.,";
 
 	TCHAR *ptr;
@@ -242,8 +237,7 @@ void initLevel4SpecialCases() {
 	mappingTableLevel4Special[83] = VK_DELETE;
 }
 
-void initLayout()
-{
+void initLayout() {
 	// same for all layouts
 	wcscpy(mappingTableLevel1 +  2, L"1234567890-`");
 	wcscpy(mappingTableLevel1 + 71, L"789-456+1230.");
@@ -400,8 +394,7 @@ void initLayout()
 	initLevel4SpecialCases();
 }
 
-void toggleBypassMode()
-{
+void toggleBypassMode() {
 	bypassMode = !bypassMode;
 
 	HINSTANCE hInstance = GetModuleHandle(NULL);
@@ -416,8 +409,7 @@ void toggleBypassMode()
 /**
  * Map a key scancode to the char that should be displayed after typing
  **/
-TCHAR mapScanCodeToChar(unsigned level, char in)
-{
+TCHAR mapScanCodeToChar(unsigned level, char in) {
 	switch (level) {
 		case 2:
 			return mappingTableLevel2[in];
@@ -438,8 +430,7 @@ TCHAR mapScanCodeToChar(unsigned level, char in)
  * Maps keyInfo flags (https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-kbdllhookstruct)
  * to dwFlags for keybd_event (https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-keybd_event)
  **/
-DWORD dwFlagsFromKeyInfo(KBDLLHOOKSTRUCT keyInfo)
-{
+DWORD dwFlagsFromKeyInfo(KBDLLHOOKSTRUCT keyInfo) {
 	DWORD dwFlags = 0;
 	if (keyInfo.flags & LLKHF_EXTENDED) dwFlags |= KEYEVENTF_EXTENDEDKEY;
 	if (keyInfo.flags & LLKHF_UP) dwFlags |= KEYEVENTF_KEYUP;
@@ -459,8 +450,7 @@ void sendDownUp(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
 	sendUp(vkCode, scanCode, isExtendedKey);
 }
 
-void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
-{
+void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo) {
 	KEYBDINPUT kb={0};
 	INPUT Input={0};
 
@@ -475,8 +465,7 @@ void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
  * Sends a char using emulated keyboard input
  * This works for most cases, but not for dead keys etc
  **/
-void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
-{
+void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo) {
 	SHORT keyScanResult = VkKeyScanEx(key, GetKeyboardLayout(0));
 
 	if (keyScanResult == -1 || shiftLockActive || capsLockActive || level4LockActive
@@ -522,13 +511,11 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
  * Send a usually dead key by injecting space after (on down).
  * This will add an actual space if actual dead key is followed by "dead" key with this
  **/
-void commitDeadKey(KBDLLHOOKSTRUCT keyInfo)
-{
+void commitDeadKey(KBDLLHOOKSTRUCT keyInfo) {
 	if (!(keyInfo.flags & LLKHF_UP)) sendDownUp(VK_SPACE, 57, false);
 }
 
-bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo)
-{
+bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo) {
 	switch(keyInfo.scanCode) {
 		case 27:
 			sendChar(L'\u0303', keyInfo);  // perispomene (Tilde)
@@ -541,8 +528,7 @@ bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	}
 }
 
-bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
-{
+bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo) {
 	switch(keyInfo.scanCode) {
 		case 13:
 			sendChar(L'\u030A', keyInfo);  // overring
@@ -573,8 +559,7 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	}
 }
 
-bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
-{
+bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo) {
 	// return if left Ctrl was injected by AltGr
 	if (keyInfo.scanCode == 541) return -1;
 
@@ -608,34 +593,29 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	return false;
 }
 
-bool isShift(KBDLLHOOKSTRUCT keyInfo)
-{
+bool isShift(KBDLLHOOKSTRUCT keyInfo) {
 	return keyInfo.vkCode == VK_SHIFT
 	    || keyInfo.vkCode == VK_LSHIFT
 	    || keyInfo.vkCode == VK_RSHIFT;
 }
 
-bool isMod3(KBDLLHOOKSTRUCT keyInfo)
-{
+bool isMod3(KBDLLHOOKSTRUCT keyInfo) {
 	return keyInfo.scanCode == scanCodeMod3L
 	    || keyInfo.scanCode == scanCodeMod3R;
 }
 
-bool isMod4(KBDLLHOOKSTRUCT keyInfo)
-{
+bool isMod4(KBDLLHOOKSTRUCT keyInfo) {
 	return keyInfo.scanCode == scanCodeMod4L
 	    || keyInfo.vkCode == VK_RMENU;
 }
 
-bool isSystemKeyPressed()
-{
+bool isSystemKeyPressed() {
 	return ctrlLeftPressed || ctrlRightPressed
 	    || altLeftPressed
 	    || winLeftPressed || winRightPressed;
 }
 
-bool isLetter(TCHAR key)
-{
+bool isLetter(TCHAR key) {
 	return (key >= 65 && key <= 90  // A-Z
 	     || key >= 97 && key <= 122 // a-z
 	     || key == L'ä' || key == L'ö'
@@ -644,20 +624,17 @@ bool isLetter(TCHAR key)
 	     || key == L'Ü' || key == L'ẞ');
 }
 
-void toggleShiftLock()
-{
+void toggleShiftLock() {
 	shiftLockActive = !shiftLockActive;
 	printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
 }
 
-void toggleCapsLock()
-{
+void toggleCapsLock() {
 	capsLockActive = !capsLockActive;
 	printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
 }
 
-void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
-{
+void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo) {
 	char vkCodeLetter[4] = {'(', keyInfo.vkCode, ')', 0};
 	char *keyName;
 	switch (keyInfo.vkCode) {
@@ -746,8 +723,7 @@ unsigned getLevel() {
 /**
  * returns `true` if execution shall be continued, `false` otherwise
  **/
-bool handleShiftKey(KBDLLHOOKSTRUCT keyInfo, WPARAM wparam, bool ignoreShiftCapsLock)
-{
+bool handleShiftKey(KBDLLHOOKSTRUCT keyInfo, WPARAM wparam, bool ignoreShiftCapsLock) {
 	bool *pressedShift = keyInfo.vkCode == VK_RSHIFT ? &shiftRightPressed : &shiftLeftPressed;
 	bool *otherShift = keyInfo.vkCode == VK_RSHIFT ? &shiftLeftPressed : &shiftRightPressed;
 
@@ -845,9 +821,7 @@ void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 				level3modLeftAndNoOtherKeyPressed = false;
 			}
 		}
-	}
-
-	else { // keyDown
+	} else { // keyDown
 		if (keyInfo.scanCode == scanCodeMod3R) {
 			level3modRightPressed = true;
 			if (mod3RAsReturn)
@@ -883,9 +857,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 			}
 		}
 		modState.mod4 = level4modLeftPressed | level4modRightPressed;
-	}
-
-	else { // keyDown
+	} else { // keyDown
 		if (keyInfo.scanCode == scanCodeMod4L) {
 			level4modLeftPressed = true;
 			if (mod4LAsTab)
@@ -905,8 +877,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
  * updates system key and layerLock states; writes key
  * returns `true` if next hook should be called, `false` otherwise
  **/
-bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
-{
+bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	bool continueExecution = handleSystemKey(keyInfo, isKeyUp);
 	if (!continueExecution) return false;
 
@@ -954,8 +925,7 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 }
 
 __declspec(dllexport)
-LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
-{
+LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 	if (code != HC_ACTION)
 		return CallNextHookEx(NULL, code, wparam, lparam);
 
@@ -1020,8 +990,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	return CallNextHookEx(NULL, code, wparam, lparam);
 }
 
-DWORD WINAPI hookThreadMain(void *user)
-{
+DWORD WINAPI hookThreadMain(void *user) {
 	HINSTANCE base = GetModuleHandle(NULL);
 	MSG msg;
 
@@ -1060,22 +1029,19 @@ DWORD WINAPI hookThreadMain(void *user)
 	return 0;
 }
 
-void exitApplication()
-{
+void exitApplication() {
 	trayicon_remove();
 	PostQuitMessage(0);
 }
 
-bool fileExists(LPCSTR szPath)
-{
+bool fileExists(LPCSTR szPath) {
 	DWORD dwAttrib = GetFileAttributesA(szPath);
 
 	return (dwAttrib != INVALID_FILE_ATTRIBUTES
 	    && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	setbuf(stdout, NULL);
 
 	/**
@@ -1176,7 +1142,6 @@ int main(int argc, char *argv[])
 	} else {
 		printf("\nKeine settings.ini gefunden: %s\n\n", ini);
 	}
-
 
 	if (argc >= 2) {
 		printf("Einstellungen von der Kommandozeile:");
@@ -1279,6 +1244,7 @@ int main(int argc, char *argv[])
 				} else {
 					printf("\nUnbekannter Parameter:%s", param);
 				}
+
 			} else {
 				printf("\ninvalid arg: %s", argv[i]);
 			}
@@ -1307,9 +1273,6 @@ int main(int argc, char *argv[])
 
 	initLayout();
 
-
-	DWORD tid;
-
 	/* Retrieves a module handle for the specified module.
 	 * parameter is NULL, GetModuleHandle returns a handle to the file used to create the calling process (.exe file).
 	 * If the function succeeds, the return value is a handle to the specified module.
@@ -1329,6 +1292,7 @@ int main(int argc, char *argv[])
 	 * 6th Parameter pThreadId(out parameter): NULL - the thread identifier is not returned
 	 * If the function succeeds, the return value is a handle to the new thread.
 	 */
+	DWORD tid;
 	HANDLE thread = CreateThread(0, 0, hookThreadMain, argv[0], 0, &tid);
 
 	return 0;
