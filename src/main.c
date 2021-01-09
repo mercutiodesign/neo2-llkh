@@ -746,7 +746,7 @@ unsigned getLevel() {
 /**
  * returns `true` if execution shall be continued, `false` otherwise
  **/
-boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, WPARAM wparam, bool ignoreShiftCapsLock)
+bool handleShiftKey(KBDLLHOOKSTRUCT keyInfo, WPARAM wparam, bool ignoreShiftCapsLock)
 {
 	bool *pressedShift = keyInfo.vkCode == VK_RSHIFT ? &shiftRightPressed : &shiftLeftPressed;
 	bool *otherShift = keyInfo.vkCode == VK_RSHIFT ? &shiftLeftPressed : &shiftRightPressed;
@@ -779,7 +779,7 @@ boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, WPARAM wparam, bool ignoreShiftC
 /**
  * returns `true` if no systemKey was pressed -> continue execution, `false` otherwise
  **/
-boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
+bool handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	bool newStateValue = !isKeyUp;
 	DWORD dwFlags = isKeyUp ? KEYEVENTF_KEYUP : keyInfo.flags;
 
@@ -956,12 +956,12 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 __declspec(dllexport)
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 {
+	if (code != HC_ACTION)
+		return CallNextHookEx(NULL, code, wparam, lparam);
+
 	KBDLLHOOKSTRUCT keyInfo;
 
-	if (
-		code == HC_ACTION
-		&& (wparam == WM_SYSKEYUP || wparam == WM_KEYUP || wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)
-	) {
+	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP || wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
 		keyInfo = *((KBDLLHOOKSTRUCT *) lparam);
 
 		if (keyInfo.flags & LLKHF_INJECTED) {
@@ -971,19 +971,19 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		}
 	}
 
-	if (code == HC_ACTION && isShift(keyInfo)) {
+	if (isShift(keyInfo)) {
 		bool continueExecution = handleShiftKey(keyInfo, wparam, bypassMode);
 		if (!continueExecution) return -1;
 	}
 
 	// Shift + Pause
-	if (code == HC_ACTION && wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && modState.shift) {
+	if (wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && modState.shift) {
 		toggleBypassMode();
 		return -1;
 	}
 
 	if (bypassMode) {
-		if (code == HC_ACTION && keyInfo.vkCode == VK_CAPITAL && !(keyInfo.flags & LLKHF_UP)) {
+		if (keyInfo.vkCode == VK_CAPITAL && !(keyInfo.flags & LLKHF_UP)) {
 			// synchronize with capsLock state during bypass
 			if (shiftLockEnabled) {
 				toggleShiftLock();
@@ -994,12 +994,12 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		return CallNextHookEx(NULL, code, wparam, lparam);
 	}
 
-	if (code == HC_ACTION && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP)) {
+	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
 		logKeyEvent("key up", keyInfo);
 
 		bool callNext = updateStatesAndWriteKey(keyInfo, true);
 		if (!callNext) return -1;
-	} else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
+	} else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
 		printf("\n");
 		logKeyEvent("key down", keyInfo);
 
