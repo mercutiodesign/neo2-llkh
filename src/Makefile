@@ -2,7 +2,7 @@ GET=i386-mingw32- #for mac
 CC=$(TARGET)gcc
 LD=$(TARGET)gcc
 WINDRES=$(TARGET)windres
-CFLAGS=-std=c99 -O3 -DWINVER=0x500 -DWIN32_WINNT=0x500
+CFLAGS=-std=gnu99 -O3 -DWINVER=0x500 -DWIN32_WINNT=0x500
 LDFLAGS+=-mwindows
 OBJECTS=main.o trayicon.o resources.o
 ifdef DEBUG
