@@ -1295,5 +1295,12 @@ int main(int argc, char *argv[]) {
 	DWORD tid;
 	HANDLE thread = CreateThread(0, 0, hookThreadMain, argv[0], 0, &tid);
 
+	MSG msg;
+	while (GetMessage(&msg, 0, 0, 0) > 0) {
+		// Translates virtual-key messages into character messages.
+		// TranslateMessage(&msg);
+		// Dispatches a message to a window procedure.
+		// DispatchMessage(&msg);
+	}
 	return 0;
 }
