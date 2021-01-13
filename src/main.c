@@ -720,18 +720,15 @@ unsigned getLevel() {
 	return level;
 }
 
-/**
- * returns `true` if execution shall be continued, `false` otherwise
- **/
-bool handleShiftKey(KBDLLHOOKSTRUCT keyInfo, WPARAM wparam, bool ignoreShiftCapsLock) {
+void handleShiftKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	bool *pressedShift = keyInfo.vkCode == VK_RSHIFT ? &shiftRightPressed : &shiftLeftPressed;
 	bool *otherShift = keyInfo.vkCode == VK_RSHIFT ? &shiftLeftPressed : &shiftRightPressed;
 
-	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
-		modState.shift = false;
-		*pressedShift = false;
+	modState.shift = !isKeyUp;
+	*pressedShift = !isKeyUp;
 
-		if (*otherShift && !ignoreShiftCapsLock) {
+	if (isKeyUp) {
+		if (*otherShift && !bypassMode) {
 			if (shiftLockEnabled) {
 				sendDownUp(VK_CAPITAL, 58, false);
 				toggleShiftLock();
@@ -741,15 +738,9 @@ bool handleShiftKey(KBDLLHOOKSTRUCT keyInfo, WPARAM wparam, bool ignoreShiftCaps
 			}
 		}
 		sendUp(keyInfo.vkCode, keyInfo.scanCode, false);
-		return false;
-	}	else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
-		modState.shift = true;
-		*pressedShift = true;
+	} else { // key down
 		sendDown(keyInfo.vkCode, keyInfo.scanCode, false);
-		return false;
 	}
-
-	return true;
 }
 
 /**
@@ -926,24 +917,25 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 
 __declspec(dllexport)
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
-	if (code != HC_ACTION)
+
+	if (code != HC_ACTION ||
+			!(wparam == WM_SYSKEYUP || wparam == WM_KEYUP ||
+			  wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
 		return CallNextHookEx(NULL, code, wparam, lparam);
-
-	KBDLLHOOKSTRUCT keyInfo;
-
-	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP || wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
-		keyInfo = *((KBDLLHOOKSTRUCT *) lparam);
-
-		if (keyInfo.flags & LLKHF_INJECTED) {
-			// process injected events like normal, because most probably we are injecting them
-			logKeyEvent((keyInfo.flags & LLKHF_UP) ? "injected up" : "injected down", keyInfo);
-			return CallNextHookEx(NULL, code, wparam, lparam);
-		}
 	}
 
+	KBDLLHOOKSTRUCT keyInfo = *((KBDLLHOOKSTRUCT *) lparam);
+
+	if (keyInfo.flags & LLKHF_INJECTED) {
+		// process injected events like normal, because most probably we are injecting them
+		logKeyEvent((keyInfo.flags & LLKHF_UP) ? "injected up" : "injected down", keyInfo);
+		return CallNextHookEx(NULL, code, wparam, lparam);
+	}
+
+	bool isKeyUp = (wparam == WM_KEYUP || wparam == WM_SYSKEYUP);
 	if (isShift(keyInfo)) {
-		bool continueExecution = handleShiftKey(keyInfo, wparam, bypassMode);
-		if (!continueExecution) return -1;
+		handleShiftKey(keyInfo, isKeyUp);
+		return -1;
 	}
 
 	// Shift + Pause
@@ -964,12 +956,12 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 		return CallNextHookEx(NULL, code, wparam, lparam);
 	}
 
-	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
+	if (isKeyUp) {
 		logKeyEvent("key up", keyInfo);
 
 		bool callNext = updateStatesAndWriteKey(keyInfo, true);
 		if (!callNext) return -1;
-	} else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
+	} else {  // key down
 		printf("\n");
 		logKeyEvent("key down", keyInfo);
 
