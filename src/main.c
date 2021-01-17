@@ -20,6 +20,7 @@ typedef struct ModState {
 } ModState;
 
 HHOOK keyhook = NULL;
+HANDLE hConsole;
 #define APPNAME "neo-llkh"
 #define LEN 103
 #define SCANCODE_TAB_KEY 15
@@ -29,6 +30,11 @@ HHOOK keyhook = NULL;
 #define SCANCODE_HASH_KEY 43       // #
 #define SCANCODE_RETURN_KEY 28
 // #define SCANCODE_ANY_ALT_KEY 56        // Alt or AltGr
+
+#define FG_WHITE 15
+#define FG_YELLOW 14
+#define FG_CYAN 11
+#define FG_GRAY 8
 
 /**
  * Some global settings.
@@ -646,7 +652,7 @@ void toggleCapsLock() {
 	printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
 }
 
-void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo) {
+void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo, int color) {
 	char vkCodeLetter[4] = {'(', keyInfo.vkCode, ')', 0};
 	char *keyName;
 	switch (keyInfo.vkCode) {
@@ -712,11 +718,17 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo) {
 						: (capsLockActive ? " [caps lock active]" : "");
 	char *level4LockInfo = level4LockActive ? " [level4 lock active]" : "";
 	char *vkPacket = (desc=="injected" && keyInfo.vkCode == VK_PACKET) ? " (VK_PACKET)" : "";
+
+	if (color < 0)
+		color = FG_WHITE;
+	SetConsoleTextAttribute(hConsole, color);
 	printf(
 		"%-13s | sc:%03u vk:0x%02X flags:0x%02X extra:%d %s%s%s%s\n",
 		desc, keyInfo.scanCode, keyInfo.vkCode, keyInfo.flags, keyInfo.dwExtraInfo,
 		keyName, shiftLockCapsLockInfo, level4LockInfo, vkPacket
 	);
+	// reset color
+	SetConsoleTextAttribute(hConsole, FG_WHITE);
 }
 
 unsigned getLevel() {
@@ -940,7 +952,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 
 	if (keyInfo.flags & LLKHF_INJECTED) {
 		// process injected events like normal, because most probably we are injecting them
-		logKeyEvent((keyInfo.flags & LLKHF_UP) ? "injected up" : "injected down", keyInfo);
+		logKeyEvent((keyInfo.flags & LLKHF_UP) ? "injected up" : "injected down", keyInfo, FG_YELLOW);
 		return CallNextHookEx(NULL, code, wparam, lparam);
 	}
 
@@ -969,13 +981,14 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 	}
 
 	if (isKeyUp) {
-		logKeyEvent("key up", keyInfo);
+		logKeyEvent("key up", keyInfo, FG_CYAN);
 
 		bool callNext = updateStatesAndWriteKey(keyInfo, true);
 		if (!callNext) return -1;
+
 	} else {  // key down
 		printf("\n");
-		logKeyEvent("key down", keyInfo);
+		logKeyEvent("key down", keyInfo, FG_CYAN);
 
 		level3modLeftAndNoOtherKeyPressed = false;
 		level3modRightAndNoOtherKeyPressed = false;
@@ -1270,6 +1283,8 @@ int main(int argc, char *argv[]) {
 		// (might be useful for US keyboards because the < key is missing there)
 		scanCodeMod4L = SCANCODE_TAB_KEY;
 
+	// console handle: needed for coloring the output
+	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	// Catch ctrl-c because it will send keydown for ctrl
 	// but then keyup for alt. Then ctrl would be locked.
 	// Also needed for removing tray icon when quitting with ctrl-c.
