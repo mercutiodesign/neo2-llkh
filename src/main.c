@@ -126,8 +126,20 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
 		// Handle the Ctrl-c signal.
 		case CTRL_C_EVENT:
 			printf("\nCtrl-c detected!\n");
-			printf("Please quit by using the tray icon!\n\n");
-			return TRUE;
+			if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
+				printf("Please quit by using the tray icon!\n\n");
+				return TRUE;
+			} else {
+				printf("Exit\n\n");
+				trayicon_remove();
+				return FALSE;
+			}
+
+		// Remove tray icon when terminal (debug window) is being closed
+		case CTRL_CLOSE_EVENT:
+			printf("Exit\n\n");
+			trayicon_remove();
+			return FALSE;
 
 		default:
 			return FALSE;
@@ -1258,10 +1270,10 @@ int main(int argc, char *argv[]) {
 		// (might be useful for US keyboards because the < key is missing there)
 		scanCodeMod4L = SCANCODE_TAB_KEY;
 
-	if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin)
-		// catch ctrl-c because it will send keydown for ctrl
-		// but then keyup for alt. Then ctrl would be locked.
-		SetConsoleCtrlHandler(CtrlHandler, TRUE);
+	// Catch ctrl-c because it will send keydown for ctrl
+	// but then keyup for alt. Then ctrl would be locked.
+	// Also needed for removing tray icon when quitting with ctrl-c.
+	SetConsoleCtrlHandler(CtrlHandler, TRUE);
 
 	initLayout();
 
@@ -1289,10 +1301,8 @@ int main(int argc, char *argv[]) {
 
 	MSG msg;
 	while (GetMessage(&msg, 0, 0, 0) > 0) {
-		// Translates virtual-key messages into character messages.
-		// TranslateMessage(&msg);
-		// Dispatches a message to a window procedure.
-		// DispatchMessage(&msg);
+		// this seems to be necessary only for clicking exit in the system tray menu
+		DispatchMessage(&msg);
 	}
 	return 0;
 }
