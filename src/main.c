@@ -552,23 +552,20 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo) {
 			sendChar(L'\u030A', keyInfo);  // overring
 			return true;
 		case 20:
-			sendChar(L'^', keyInfo);
-			commitDeadKey(keyInfo);
+			sendUnicodeChar(L'^', keyInfo);
 			return true;
 		case 27:
 			sendChar(L'\u0337', keyInfo);  // bar (diakritischer Schrägstrich)
 			return true;
 		case 31:
 			if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
-				sendChar(L'`', keyInfo);
-				commitDeadKey(keyInfo);
+				sendUnicodeChar(L'`', keyInfo);
 				return true;
 			}
 			return false;
 		case 48:
 			if (strcmp(layout, "kou") != 0 && strcmp(layout, "vou") != 0) {
-				sendChar(L'`', keyInfo);
-				commitDeadKey(keyInfo);
+				sendUnicodeChar(L'`', keyInfo);
 				return true;
 			}
 			return false;
