@@ -12,7 +12,7 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 * [KOY](http://adnw.de/index.php?n=Main.SeitlicheNachbaranschl%c3%a4ge)
 * [VOU](https://maximilian-schillinger.de/vou-layout.html) (mein persönliches Layout auf Basis von KOY)
 * [NeoQwertz](https://neo-layout.org/Layouts/neoqwertz/)
-* Andere Layouts können über eine Konfigurationsdatei definiert werden.
+* Andere Layouts können über eine [Konfigurationsdatei](https://github.com/MaxGyver83/neo2-llkh/blob/master/src/settings.ini) definiert werden.
 
 ## Funktionsumfang
 * Alle 6 Ebenen (auf den Ebenen 5 und 6 funktionieren nicht alle Zeichen)
@@ -63,7 +63,7 @@ Ein eigenes Layout kann wie folgt definiert werden, hier am Beispiel von *Cry*:
 
 `customLayout=jluaqwbdgyzßcrieomntshvxüäöpf,.k`
 
-Dabei entsprechen die ersten 12 Zeichen den Tasten `Q` bis `+`, die nächsten 11 Zeichen `A` bis `Ä` und die letzten 11 Zeichen `Y` bis `-`.
+Dabei entsprechen die ersten 11 Zeichen den Tasten `Q` bis `Ü`, die nächsten 11 Zeichen `A` bis `Ä` und die letzten 10 Zeichen `Y` bis `-`.
 
 ### Einrasten von Ebene 2
 Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktiviert werden. Dafür muss der Wert von `shiftLockEnabled` in der `settings.ini` auf `1` gesetzt werden:
