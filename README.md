@@ -28,6 +28,7 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 * Die CapsLock-Taste kann in eine zusätzliche Escape-Taste verwandelt werden (wenn sie alleine angeschlagen wird)
 * Der rechte Ebene3-Modifier kann in eine zusätzliche Enter-Taste verwandelt werden (wenn er alleine angeschlagen wird)
 * Der linke Ebene4-Modifier kann in eine zusätzliche Tab-Taste verwandelt werden (wenn er alleine angeschlagen wird)
+* Mod-Tap-Tasten: Alle Buchstabentasten (+ `,`, `.` und `-`) können so konfiguriert werden, dass sie ein Modifier sind, wenn sie gehalten werden, während eine andere Taste gedrückt und wieder gelöst wird. Andernfalls geben sie den zugewiesenen Buchstaben aus.
 
 ### Was nicht funktioniert
 
@@ -36,7 +37,6 @@ Dieser Treiber unterstützt folgende Tastaturlayouts:
 
 ### Bekannte Fehler
 
-* ~~Ein Benutzer hat berichtet, dass es ab und zu passiert, dass die Strg-Taste "virtuell" zu klemmen scheint. Wenn das passiert, kann jede weitere Eingabe eine Tastenkombination mit Strg auslösen. Vorsicht: Hier besteht die Gefahr eines Datenverlustes (wenn z.B. ein ungespeichertes Dokument ungewollt geschlossen wird).~~ Dieser Fehler kann mit Commit [aca671f183](https://github.com/MaxGyver83/neo2-llkh/tree/aca671f1830ebe1f9e74b82c6d0cba77067daa61) vom 8.10.2019 reproduziert werden. Er tritt in der aktuellen Version jedoch nicht mehr auf.
 * Eine Benutzerin hat berichtet, dass die Scollfunktion ihres Touchpads ausfällt, wenn sie Enter (AltGr+V) oder Escape (AltGr+Y) auf Ebene 4 im Neo-Layout betätigt.
 
 ## Selbst kompilieren
@@ -163,4 +163,14 @@ Die Einstellungen aus der `settings.ini` werden trotzdem berücksichtigt. Wenn e
 
 ### Vertauschen von Strg und Alt (und ggf. Win)
 
-Wenn du die Option `swapLeftCtrlAndLeftAlt` oder `swapLeftCtrlLeftAltAndLeftWin` verwenden möchtest, solltest du den Treiber unbedingt mit Admin-Rechten starten (Rechtsklick auf `neo2-llkh.exe` → Als Administrator ausführen)! Andernfalls besteht folgende Problematik: In Systemprogrammen (z.B. `regedit`) wird der Treiber ignoriert, es gilt also z.B. QWERTZ. Wenn du mit Alt-Tab zu einem "normalen" Programm wechselst, wird beim Wechsel die Alt-Taste auf Strg umgemappt und dadurch nicht gelöst (weil sie ja zum Zeitpunkt des Lösens bereits eine Strg-Taste ist). Somit bleit Alt "virtuell" gedrückt und der nächste Tastendruck löst einen ungewollten Shortcut mit unerwarteten Folgen aus.
+Wenn du die Option `swapLeftCtrlAndLeftAlt` oder `swapLeftCtrlLeftAltAndLeftWin` verwenden möchtest, solltest du den Treiber unbedingt mit Admin-Rechten starten (Rechtsklick auf `neo-llkh.exe` → Als Administrator ausführen)! Andernfalls besteht folgende Problematik: In Systemprogrammen (z.B. `regedit`) wird der Treiber ignoriert, es gilt also z.B. QWERTZ. Wenn du mit Alt-Tab zu einem "normalen" Programm wechselst, wird beim Wechsel die Alt-Taste auf Strg umgemappt und dadurch nicht gelöst (weil sie ja zum Zeitpunkt des Lösens bereits eine Strg-Taste ist). Somit bleit Alt "virtuell" gedrückt und der nächste Tastendruck löst einen ungewollten Shortcut mit unerwarteten Folgen aus.
+
+### Mod-Tap-Tasten
+
+Eine Mod-Tap-Taste (bekannt aus der Open-Source-Tastaturfirmware [QMK](https://docs.qmk.fm/#/mod_tap)) ist eine Taste mit zwei Funktionen: Wenn sie gedrückt und gleich wieder gelöst wird (engl. *to tap*) sendet sie (üblicherweise) einen Buchstaben. Wenn sie gedrückt und gehalten wird, während eine andere gedrückt und wieder gelöst wird, ist sie ein Modifier. Dabei ist es entscheidend, dass die zweite Taste zuerst losgelassen wird. (Andernfalls würde man beim schnellen Tippen durch die Überlappung der Tastenanschläge ungewollt Tastenkominationen auslösen.) Mit diesem Verhalten entspricht `neo-llkh`s Mod-Tap-Taste einer [tap-next-release](https://github.com/david-janssen/kmonad/blob/master/keymap/tutorial.kbd#L676)-Taste in [KMonad](https://github.com/david-janssen/kmonad).
+
+Eine Mod-Tap-Taste wird wie folgt in der `settings.ini` definiert:
+
+`a=ModTap(mod3)`
+
+Dabei ist `a` die `A`-Taste im QWERTZ-Layout. Angetippt gibt sie den Buchstaben aus, der ihr im aktivierten Layout zugeordnet ist. Gehalten wird sie zum Ebene3-Modifier. Gültige Modifier-Werte (innerhalb der Klammern): `ctrl`, `shift`, `mod3`, `mod4`, `alt`, `win`.

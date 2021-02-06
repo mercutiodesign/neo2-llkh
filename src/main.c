@@ -32,6 +32,16 @@ HANDLE hConsole;
 #define SCANCODE_RETURN_KEY 28
 // #define SCANCODE_ANY_ALT_KEY 56        // Alt or AltGr
 
+enum modTapModifier {
+	MT_NONE,
+	MT_CTRL,
+	MT_SHIFT,
+	MT_MOD3,
+	MT_MOD4,
+	MT_ALT,
+	MT_WIN
+};
+
 #define FG_WHITE 15
 #define FG_YELLOW 14
 #define FG_CYAN 11
@@ -94,6 +104,7 @@ bool winRightPressed = false;
 
 ModState modState = { false, false, false };
 
+int mapCharacterToScanCode[256] = {0};
 /**
  * Mapping tables for four levels.
  * They will be defined in initLayout().
@@ -105,7 +116,84 @@ TCHAR mappingTableLevel4[LEN] = {0};
 TCHAR mappingTableLevel5[LEN] = {0};
 TCHAR mappingTableLevel6[LEN] = {0};
 CHAR mappingTableLevel4Special[LEN] = {0};
+TCHAR mappingTapNextRelease[LEN] = {0};
 TCHAR numpadSlashKey[7];
+
+/**
+ * When a key with TapNextRelease function is pressed, the key to emit depends
+ * on the order this and succesive keys are being released. Thus all keys
+ * are stored in the keyQueue in the first place.
+ */
+#define QUEUE_SIZE 50
+KBDLLHOOKSTRUCT keyQueue[QUEUE_SIZE];
+int keyQueueLength;
+int keyQueueFirst;
+int keyQueueLast;
+int keyQueueStatus[QUEUE_SIZE]; // 0=empty/handled, 1=regular key pressed, 2=TapNextRelease key not activated, 3=TapNextRelease key activated
+char *MT_MODIFIER_STRING[7] = {"", "CTRL", "SHIFT", "MOD3", "MOD4", "ALT", "WIN"};
+
+typedef struct ModTap {
+	int modifier;
+	int keycode;
+} ModTap;
+#define MOD_TAP_LEN 12
+ModTap modTap[MOD_TAP_LEN];
+int modTapKeyCount = 0;  // how many ModTap keys are defined
+
+bool handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp);
+void handleShiftKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp);
+void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp);
+void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp);
+bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp);
+
+void resetKeyQueue() {
+	keyQueueLength = 0;
+	keyQueueFirst = 0;
+	keyQueueLast = -1;
+	memset(keyQueueStatus, 0, sizeof keyQueueStatus);
+}
+
+void cleanupKeyQueue() {
+	printf("\nkeyQueueStatus:");
+	for (int i = keyQueueFirst; i <= keyQueueLast; i++) {
+		printf(" %i", keyQueueStatus[i]);
+	}
+	printf("\n");
+
+	if (keyQueueFirst == 0) {
+		int firstEmptyPosition = 0;
+		while (keyQueueStatus[firstEmptyPosition])
+			firstEmptyPosition++;
+		int nextNonEmptyPosition = firstEmptyPosition;
+		while (!keyQueueStatus[nextNonEmptyPosition])
+			nextNonEmptyPosition++;
+		int delta = nextNonEmptyPosition - firstEmptyPosition;
+		SetConsoleTextAttribute(hConsole, FG_GRAY);
+		printf("cleanupKeyQueue: Move all entries starting from index %i back by %i\n", nextNonEmptyPosition, delta);
+		SetConsoleTextAttribute(hConsole, FG_WHITE);
+		// if keyQueueFirst = 45, move all entries back by 45
+		for (int i = nextNonEmptyPosition; i <= keyQueueLast; i++) {
+			keyQueue[i-delta] = keyQueue[i];
+			keyQueueStatus[i-delta];
+			keyQueueStatus[i] = 0;
+		}
+		keyQueueLast -= delta;
+		return;
+	}
+	// if keyQueueFirst = 45, move all entries back by 45
+	int delta = keyQueueFirst;
+	SetConsoleTextAttribute(hConsole, FG_GRAY);
+	printf("cleanupKeyQueue: Move all entries back by %i\n", delta);
+	SetConsoleTextAttribute(hConsole, FG_WHITE);
+	for (int i = keyQueueFirst; i <= keyQueueLast; i++) {
+		keyQueue[i-delta] = keyQueue[i];
+		// keyQueue[i] = 0;
+		keyQueueStatus[i-delta];
+		keyQueueStatus[i] = 0;
+	}
+	keyQueueLast -= delta;
+	keyQueueFirst = 0;
+}
 
 void SetStdOutToNewConsole() {
 	// allocate a console for this app
@@ -175,6 +263,168 @@ void str2wcs(TCHAR *dest, char *src, size_t n) {
 	}
 	result[pos] = 0;
 	wcsncpy(dest, result, pos);
+}
+
+void handleTapNextReleaseKey(int keyCode, bool isKeyUp) {
+	KBDLLHOOKSTRUCT tapNextReleaseKey;
+	// memset(&tapNextReleaseKey, 0, sizeof(tapNextReleaseKey));
+	switch(keyCode) {
+		case MT_CTRL:
+			// simulate ctrl key pressed or released
+			tapNextReleaseKey.vkCode = VK_LCONTROL;
+			tapNextReleaseKey.scanCode = 29;
+			tapNextReleaseKey.flags = 0;
+			handleSystemKey(tapNextReleaseKey, isKeyUp);
+			break;
+		case MT_SHIFT:
+			// simulate shift key pressed or released
+			tapNextReleaseKey.vkCode = VK_SHIFT;
+			handleShiftKey(tapNextReleaseKey, isKeyUp);
+			break;
+		case MT_MOD3:
+			// simulate mod3Key pressed or released
+			tapNextReleaseKey.scanCode = scanCodeMod3L;
+			handleMod3Key(tapNextReleaseKey, isKeyUp);
+			handleMod3Key(tapNextReleaseKey, isKeyUp);
+			break;
+		case MT_MOD4:
+			// simulate mod4Key pressed or released
+			tapNextReleaseKey.scanCode = scanCodeMod4L;
+			handleMod4Key(tapNextReleaseKey, isKeyUp);
+			break;
+		case MT_ALT:
+			// simulate alt key pressed or released
+			tapNextReleaseKey.vkCode = VK_LMENU;
+			/* tapNextReleaseKey.scanCode = 29; */
+			tapNextReleaseKey.flags = 0;
+			handleSystemKey(tapNextReleaseKey, isKeyUp);
+			break;
+		case MT_WIN:
+			// simulate windows key pressed or released
+			tapNextReleaseKey.vkCode = VK_LWIN;
+			/* tapNextReleaseKey.scanCode = 29; */
+			tapNextReleaseKey.flags = 0;
+			handleSystemKey(tapNextReleaseKey, isKeyUp);
+			break;
+	}
+}
+
+void appendToQueue(KBDLLHOOKSTRUCT keyInfo) {
+	// only keyDown events
+	if (keyQueueLength && keyInfo.scanCode == keyQueue[keyQueueLast].scanCode)
+		return;
+	if (keyQueueLast >= QUEUE_SIZE - 1)
+		cleanupKeyQueue();
+	keyQueueLast++;
+	keyQueueLength++;
+	int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
+	int tapNextRelease = mappingTapNextRelease[keyInfo.scanCode];
+	SetConsoleTextAttribute(hConsole, FG_GRAY);
+	printf("Append key '%c%s%s' to queue at index %i ", character, tapNextRelease ? "|" : "", MT_MODIFIER_STRING[tapNextRelease], keyQueueLast);
+	if (keyQueueLength == 1)
+		printf("(1 key is pressed)\n");
+	else if (keyQueueLength > 1)
+		printf("(%i keys are pressed)\n", keyQueueLength);
+	else
+		printf("\n");
+	SetConsoleTextAttribute(hConsole, FG_WHITE);
+	// printf("keyQueueFirst: %i, keyQueueLast: %i, keyQueueLength: %i\n", keyQueueFirst, keyQueueLast, keyQueueLength);
+	keyQueue[keyQueueLast] = keyInfo;
+	keyQueueStatus[keyQueueLast] = tapNextRelease ? 2 : 1;
+}
+
+// returns true, key release has been handled
+bool checkQueue(KBDLLHOOKSTRUCT keyInfo) {
+	// only keyUp events
+	// definiton: tap = press + release
+	bool keyFoundInQueue = false;
+	int i = keyQueueFirst;
+	while (i <= keyQueueLast) {
+		// find released key in queue
+		if (keyQueueStatus[i] > 0 && keyInfo.scanCode == keyQueue[i].scanCode) {
+			keyFoundInQueue = true;
+			// printf("Key released is at index %i in queue.\n", i);
+			// no matter what type of key it is:
+			// check if keys in the queue pressed earlier are unactivated tap-next-release keys
+			for (int j=keyQueueFirst; j<i; j++) {
+				if (keyQueueStatus[j] == 2) {
+					// send key down for tap-next-release function of this key
+					handleTapNextReleaseKey(mappingTapNextRelease[keyQueue[j].scanCode], false);
+					// update status (mark as activated)
+					keyQueueStatus[j] = 3;
+				}
+			}
+			// depending on key type
+			if (keyQueueStatus[i] <= 2) {
+				// regular key (no tap-next-release function) or
+				// tap-next-release key which has not been activated
+				updateStatesAndWriteKey(keyQueue[i], false); // key down
+				// release key
+				keyQueue[i].flags += 0x80;
+				// TODO: Es wäre besser hier down und up auf einmal zu senden, damit notwendige Modifier nicht zweimal gesendet werden.
+				updateStatesAndWriteKey(keyQueue[i], true); // key up
+			} else {
+				// tap-next-release key which was activated
+				// send key up for alternative mapping
+				handleTapNextReleaseKey(mappingTapNextRelease[keyQueue[i].scanCode], true);
+			}
+			// set status to 0 (=handled)
+			keyQueueStatus[i] = 0;
+			int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
+			int tapNextRelease = mappingTapNextRelease[keyInfo.scanCode];
+			SetConsoleTextAttribute(hConsole, FG_GRAY);
+			printf("Remove key '%c%s%s' from queue at index %i ", character, tapNextRelease ? "|" : "", MT_MODIFIER_STRING[tapNextRelease], i);
+			if (keyQueueLength-1 == 1)
+				printf("(1 key is pressed)\n");
+			else if (keyQueueLength-1 > 1)
+				printf("(%i keys are pressed)\n", keyQueueLength);
+			else
+				printf("\n");
+			SetConsoleTextAttribute(hConsole, FG_WHITE);
+			// if beginning of queue, move it to next tap-next-release key
+			if (i == keyQueueFirst) {
+				// queue always begins with tap-next-release keys
+				// for (int j=i+1; j<keyQueueLast; j++) {
+				int j = i + 1;
+				while (j <= keyQueueLast) {
+					if (keyQueueStatus[j] >= 2) {
+						// make this position the beginning of the queue
+						keyQueueFirst = j;
+						keyQueueLength--;
+						break;
+					} else if (keyQueueStatus[j] == 1) {
+						// press this key (key down was held back, now it does not depend of other key states anymore)
+						updateStatesAndWriteKey(keyQueue[j], false); // key down
+						keyQueueLength--;
+					}
+					j++;
+				}
+				if (j > keyQueueLast)
+					resetKeyQueue();
+			} else if (i == keyQueueLast) {
+				int j = i - 1;
+				while (j >= keyQueueFirst) {
+					if (keyQueueStatus[j] > 0) {
+						keyQueueLength--;
+						keyQueueLast = j;
+						break;
+					}
+					j--;
+				}
+				if (j < keyQueueFirst)
+					resetKeyQueue();
+			} else {
+				// key released was neither first nor last in queue
+				keyQueueLength--;
+			}
+			break;
+		}
+		i++;
+	}
+	// if (keyFoundInQueue) {
+	// 	printf("keyQueueFirst: %i, keyQueueLast: %i, keyQueueLength: %i\n", keyQueueFirst, keyQueueLast, keyQueueLength);
+	// }
+	return keyFoundInQueue;
 }
 
 void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars) {
@@ -256,6 +506,42 @@ void initLevel4SpecialCases() {
 	mappingTableLevel4Special[83] = VK_DELETE;
 }
 
+void initCharacterToScanCodeMap() {
+	mapCharacterToScanCode['q'] = 0x10;
+	mapCharacterToScanCode['w'] = 0x11;
+	mapCharacterToScanCode['e'] = 0x12;
+	mapCharacterToScanCode['r'] = 0x13;
+	mapCharacterToScanCode['t'] = 0x14;
+	mapCharacterToScanCode['z'] = 0x15;
+	mapCharacterToScanCode['u'] = 0x16;
+	mapCharacterToScanCode['i'] = 0x17;
+	mapCharacterToScanCode['o'] = 0x18;
+	mapCharacterToScanCode['p'] = 0x19;
+	mapCharacterToScanCode[0xfc] = 0x1a; // ü
+	mapCharacterToScanCode['+'] = 0x1b;
+	mapCharacterToScanCode['a'] = 0x1e;
+	mapCharacterToScanCode['s'] = 0x1f;
+	mapCharacterToScanCode['d'] = 0x20;
+	mapCharacterToScanCode['f'] = 0x21;
+	mapCharacterToScanCode['g'] = 0x22;
+	mapCharacterToScanCode['h'] = 0x23;
+	mapCharacterToScanCode['j'] = 0x24;
+	mapCharacterToScanCode['k'] = 0x25;
+	mapCharacterToScanCode['l'] = 0x26;
+	mapCharacterToScanCode[0xf6] = 0x27; // ö
+	mapCharacterToScanCode[0xe4] = 0x28; // ä
+	mapCharacterToScanCode['y'] = 0x2c;
+	mapCharacterToScanCode['x'] = 0x2d;
+	mapCharacterToScanCode['c'] = 0x2e;
+	mapCharacterToScanCode['v'] = 0x2f;
+	mapCharacterToScanCode['b'] = 0x30;
+	mapCharacterToScanCode['n'] = 0x31;
+	mapCharacterToScanCode['m'] = 0x32;
+	mapCharacterToScanCode[','] = 0x33;
+	mapCharacterToScanCode['.'] = 0x34;
+	mapCharacterToScanCode['-'] = 0x35;
+}
+
 void initLayout() {
 	// same for all layouts
 	wcscpy(mappingTableLevel1 +  2, L"1234567890-`");
@@ -320,6 +606,8 @@ void initLayout() {
 			wcscpy(mappingTableLevel1 + 16, L"v.ouäqglhfj´");
 			wcscpy(mappingTableLevel1 + 30, L"caeiybtrnsß");
 			wcscpy(mappingTableLevel1 + 44, L"zx,üöpdwmk");
+			/* mappingTapNextRelease[0x3A] = MT_SHIFT; // CapsLock */
+			/* mappingTapNextRelease[0x28] = MT_SHIFT; // Ä */
 		}
 
 		wcscpy(mappingTableLevel3 + 16, L"@%{}^!<>=&€̷");
@@ -411,6 +699,14 @@ void initLayout() {
 
 	// level4 special cases
 	initLevel4SpecialCases();
+
+	// apply modTap modifiers
+	// puts("\nModTap keys:");
+	for (int i=0; i<MOD_TAP_LEN && modTap[i].modifier; i++) {
+		unsigned int scanCode = mapCharacterToScanCode[(unsigned char)modTap[i].keycode];
+		mappingTapNextRelease[scanCode] = modTap[i].modifier;
+		// printf("%s (%i), %c (%i), sc=0x%X (%i)\n", MT_MODIFIER_STRING[modTap[i].modifier], modTap[i].modifier, modTap[i].keycode, (unsigned char)modTap[i].keycode, scanCode, scanCode);
+    }
 }
 
 void toggleBypassMode() {
@@ -900,9 +1196,13 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	unsigned level = getLevel();
 
 	if (isMod3(keyInfo)) {
+		// if (keyQueueLength)
+		// 	return false;
 		handleMod3Key(keyInfo, isKeyUp);
 		return false;
 	} else if (isMod4(keyInfo)) {
+		// if (keyQueueLength)
+		// 	return false;
 		handleMod4Key(keyInfo, isKeyUp);
 		return false;
 	} else if ((keyInfo.flags & LLKHF_EXTENDED) && keyInfo.scanCode != 53) {
@@ -958,7 +1258,10 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 	}
 
 	bool isKeyUp = (wparam == WM_KEYUP || wparam == WM_SYSKEYUP);
+
 	if (isShift(keyInfo)) {
+		// if (keyQueueLength)
+		// 	return false;
 		handleShiftKey(keyInfo, isKeyUp);
 		return -1;
 	}
@@ -984,12 +1287,37 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 	if (isKeyUp) {
 		logKeyEvent("key up", keyInfo, FG_CYAN);
 
+		if (keyQueueLength) {
+			// int index;
+			bool keyReleasedHandled = checkQueue(keyInfo);
+			if (keyReleasedHandled)
+				return -1;
+				// return CallNextHookEx(NULL, code, wparam, lparam);
+		}
 		bool callNext = updateStatesAndWriteKey(keyInfo, true);
 		if (!callNext) return -1;
 
 	} else {  // key down
+		unsigned level = getLevel();
+		printf("\nLEVEL %i", level);
+		// if (ctrlLeftPressed) printf(" CTRL_L");
+		// if (ctrlRightPressed) printf(" CTRL_R");
+		// if (altLeftPressed) printf(" ALT_L");
+		// if (winLeftPressed) printf(" WIN_L");
+		// if (winRightPressed) printf(" WIN_R");
+		// if (shiftLeftPressed) printf(" SHIFT_L");
+		// if (shiftRightPressed) printf(" SHIFT_R");
+		// if (modState.shift) printf(" shift");
+		// if (modState.mod3) printf(" mod3");
+		// if (modState.mod4) printf(" mod4");
 		printf("\n");
+
 		logKeyEvent("key down", keyInfo, FG_CYAN);
+
+		if (keyQueueLength || mappingTapNextRelease[keyInfo.scanCode]) {
+			appendToQueue(keyInfo);
+			return -1;
+		}
 
 		level3modLeftAndNoOtherKeyPressed = false;
 		level3modRightAndNoOtherKeyPressed = false;
@@ -1137,6 +1465,46 @@ int main(int argc, char *argv[]) {
 		printf(" mod4LAsTab: %d\n", mod4LAsTab);
 		printf(" debugWindow: %d\n\n", debugWindow);
 
+		// char const* const fileName = argv[1]; /* should check that argc > 1 */
+		FILE* file = fopen(ini, "r"); /* should check the result */
+		char line[256];
+		int i = 0;
+
+		while (fgets(line, sizeof(line), file) && i < MOD_TAP_LEN) {
+			if (strstr(line, "=ModTap(") != NULL) {
+				printf("%s", line);
+				char *token = strtok(line, "=");
+				if (token == NULL) continue;
+				int keycode = (int)token[0];
+				token = strtok(NULL, "(");
+				if (token == NULL) continue;
+				token = strtok(NULL, ")");
+				if (token == NULL) continue;
+				if (strcmp(token, "ctrl") == 0) {
+					modTap[i].modifier = MT_CTRL;
+				} else if (strcmp(token, "shift") == 0) {
+					modTap[i].modifier = MT_SHIFT;
+				} else if (strcmp(token, "mod3") == 0) {
+					modTap[i].modifier = MT_MOD3;
+				} else if (strcmp(token, "mod4") == 0) {
+					modTap[i].modifier = MT_MOD4;
+				} else if (strcmp(token, "alt") == 0) {
+					modTap[i].modifier = MT_ALT;
+				} else if (strcmp(token, "win") == 0) {
+					modTap[i].modifier = MT_WIN;
+				} else {
+					printf(line);
+					printf("Unknown modifier %s\n", token);
+					printf("Please use one of these: ctrl, shift, mod3, mod4, alt, win.\n");
+					continue;
+				}
+				modTap[i].keycode = keycode;
+				// printf("i=%i, keycode=%i, modifier=%i\n", i, (unsigned char)modTap[i].keycode, modTap[i].modifier);
+				i++;
+			}
+		}
+		fclose(file);
+
 	} else {
 		printf("\nKeine settings.ini gefunden: %s\n\n", ini);
 	}
@@ -1274,7 +1642,10 @@ int main(int argc, char *argv[]) {
 	// Also needed for removing tray icon when quitting with ctrl-c.
 	SetConsoleCtrlHandler(CtrlHandler, TRUE);
 
+	initCharacterToScanCodeMap();
 	initLayout();
+
+	resetKeyQueue();
 
 	/* Retrieves a module handle for the specified module.
 	 * parameter is NULL, GetModuleHandle returns a handle to the file used to create the calling process (.exe file).
