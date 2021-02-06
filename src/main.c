@@ -634,10 +634,10 @@ bool isSystemKeyPressed() {
 bool isLetter(TCHAR key) {
 	return (key >= 65 && key <= 90  // A-Z
 	     || key >= 97 && key <= 122 // a-z
-	     || key == L'ä' || key == L'ö'
-	     || key == L'ü' || key == L'ß'
-	     || key == L'Ä' || key == L'Ö'
-	     || key == L'Ü' || key == L'ẞ');
+	     || key == L'ä' || key == L'Ä'
+	     || key == L'ö' || key == L'Ö'
+	     || key == L'ü' || key == L'Ü'
+	     || key == L'ß' || key == L'ẞ');
 }
 
 void toggleShiftLock() {
@@ -704,6 +704,9 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo, int color) {
 			break;
 		case VK_RETURN:
 			keyName = "(Return)";
+			break;
+		case VK_SPACE:
+			keyName = "(Spacebar)";
 			break;
 		case 0x41 ... 0x5A:
 			keyName = vkCodeLetter;
@@ -1045,6 +1048,7 @@ DWORD WINAPI hookThreadMain(void *user) {
 }
 
 void exitApplication() {
+	printf("Clicked Exit button!\n");
 	trayicon_remove();
 	PostQuitMessage(0);
 }
@@ -1054,6 +1058,12 @@ bool fileExists(LPCSTR szPath) {
 
 	return (dwAttrib != INVALID_FILE_ATTRIBUTES
 	    && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+bool checkSetting(char *keyword, char *filename) {
+	char returnValue[100];
+	GetPrivateProfileStringA("Settings", keyword, "0", returnValue, 100, filename);
+	return (strcmp(returnValue, "1") == 0);
 }
 
 int main(int argc, char *argv[]) {
@@ -1084,47 +1094,20 @@ int main(int argc, char *argv[]) {
 
 		GetPrivateProfileStringA("Settings", "customLayout", "", customLayout, 65, ini);
 
-		GetPrivateProfileStringA("Settings", "symmetricalLevel3Modifiers", "0", returnValue, 100, ini);
-		quoteAsMod3R = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "returnKeyAsMod3R", "0", returnValue, 100, ini);
-		returnAsMod3R = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "tabKeyAsMod4L", "0", returnValue, 100, ini);
-		tabAsMod4L = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "capsLockEnabled", "0", returnValue, 100, ini);
-		capsLockEnabled = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "shiftLockEnabled", "0", returnValue, 100, ini);
-		shiftLockEnabled = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "level4LockEnabled", "0", returnValue, 100, ini);
-		level4LockEnabled = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "qwertzForShortcuts", "0", returnValue, 100, ini);
-		qwertzForShortcuts = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "swapLeftCtrlAndLeftAlt", "0", returnValue, 100, ini);
-		swapLeftCtrlAndLeftAlt = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "swapLeftCtrlLeftAltAndLeftWin", "0", returnValue, 100, ini);
-		swapLeftCtrlLeftAltAndLeftWin = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "supportLevels5and6", "0", returnValue, 100, ini);
-		supportLevels5and6 = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "capsLockAsEscape", "0", returnValue, 100, ini);
-		capsLockAsEscape = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "mod3RAsReturn", "0", returnValue, 100, ini);
-		mod3RAsReturn = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "mod4LAsTab", "0", returnValue, 100, ini);
-		mod4LAsTab = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "debugWindow", "0", returnValue, 100, ini);
-		debugWindow = (strcmp(returnValue, "1") == 0);
+		quoteAsMod3R = checkSetting("symmetricalLevel3Modifiers", ini);
+		returnAsMod3R = checkSetting("returnKeyAsMod3R", ini);
+		tabAsMod4L = checkSetting("tabKeyAsMod4L", ini);
+		capsLockEnabled = checkSetting("capsLockEnabled", ini);
+		shiftLockEnabled = checkSetting("shiftLockEnabled", ini);
+		level4LockEnabled = checkSetting("level4LockEnabled", ini);
+		qwertzForShortcuts = checkSetting("qwertzForShortcuts", ini);
+		swapLeftCtrlAndLeftAlt = checkSetting("swapLeftCtrlAndLeftAlt", ini);
+		swapLeftCtrlLeftAltAndLeftWin = checkSetting("swapLeftCtrlLeftAltAndLeftWin", ini);
+		supportLevels5and6 = checkSetting("supportLevels5and6", ini);
+		capsLockAsEscape = checkSetting("capsLockAsEscape", ini);
+		mod3RAsReturn = checkSetting("mod3RAsReturn", ini);
+		mod4LAsTab = checkSetting("mod4LAsTab", ini);
+		debugWindow = checkSetting("debugWindow", ini);
 
 		if (capsLockEnabled)
 			shiftLockEnabled = false;
@@ -1160,108 +1143,110 @@ int main(int argc, char *argv[]) {
 
 	if (argc >= 2) {
 		printf("Einstellungen von der Kommandozeile:");
-		char delimiter[] = "=";
+		const char delimiter[] = "=";
 		char *param, *value;
-		for (int i=1; i< argc; i++) {
+		for (int i = 1; i < argc; i++) {
 			if (strcmp(argv[i], "neo") == 0
-				|| strcmp(argv[i], "adnw") == 0
-				|| strcmp(argv[i], "adnwzjf") == 0
-				|| strcmp(argv[i], "bone") == 0
-				|| strcmp(argv[i], "koy") == 0
-				|| strcmp(argv[i], "kou") == 0
-				|| strcmp(argv[i], "vou") == 0
-				|| strcmp(argv[i], "qwertz") == 0) {
+					|| strcmp(argv[i], "adnw") == 0
+					|| strcmp(argv[i], "adnwzjf") == 0
+					|| strcmp(argv[i], "bone") == 0
+					|| strcmp(argv[i], "koy") == 0
+					|| strcmp(argv[i], "kou") == 0
+					|| strcmp(argv[i], "vou") == 0
+					|| strcmp(argv[i], "qwertz") == 0) {
 				strncpy(layout, argv[i], 100);
 				printf("\n Layout: %s", layout);
+				continue;
+			}
 
-			} else if (strstr(argv[i], "=") != NULL) {
-				//printf("\narg%d: %s", i, argv[i]);
-				param = strtok(argv[i], delimiter);
-				if (param != NULL) {
-					value = strtok(NULL, delimiter);
-					//if (value != NULL) {
-					//	printf("\n%s ist %s", param, value);
-					//}
-				}
+			if (strstr(argv[i], delimiter) == NULL) {
+				printf("\nUnbekannter Parameter: %s", argv[i]);
+				continue;
+			}
 
-				if (strcmp(param, "debugWindow") == 0) {
-					bool debugWindowAlreadyStarted = debugWindow;
-					debugWindow = value==NULL ? false : (strcmp(value, "1") == 0);
-					if (debugWindow && !debugWindowAlreadyStarted)
-						// Open Console Window to see printf output
-						SetStdOutToNewConsole();
-					printf("\n debugWindow: %d", debugWindow);
+			//printf("\narg%d: %s", i, argv[i]);
+			param = strtok(argv[i], delimiter);
+			if (param == NULL) {
+				printf("\nUnbekannter Parameter: %s", argv[i]);
+				continue;
+			}
 
-				} else if (strcmp(param, "layout") == 0) {
-					if (value != NULL) {
-						strncpy(layout, value, 100);
-						printf("\n Layout: %s", layout);
-					}
+			value = strtok(NULL, delimiter);
+			if (value == NULL) {
+				printf("\nUnbekannter Parameter: %s", argv[i]);
+				continue;
+			}
 
-				} else if (strcmp(param, "customLayout") == 0) {
-					if (value != NULL) {
-						strncpy(customLayout, value, 65);
-						printf("\n Custom layout: %s", customLayout);
-					}
+			if (strcmp(param, "debugWindow") == 0) {
+				bool debugWindowAlreadyStarted = debugWindow;
+				debugWindow = (strcmp(value, "1") == 0);
+				if (debugWindow && !debugWindowAlreadyStarted)
+					// Open Console Window to see printf output
+					SetStdOutToNewConsole();
+				printf("\n debugWindow: %d", debugWindow);
 
-				} else if (strcmp(param, "symmetricalLevel3Modifiers") == 0) {
-					quoteAsMod3R = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n symmetricalLevel3Modifiers: %d", quoteAsMod3R);
+			} else if (strcmp(param, "layout") == 0) {
+				strncpy(layout, value, 100);
+				printf("\n Layout: %s", layout);
 
-				} else if (strcmp(param, "returnKeyAsMod3R") == 0) {
-					returnAsMod3R = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n returnKeyAsMod3R: %d", returnAsMod3R);
+			} else if (strcmp(param, "customLayout") == 0) {
+				strncpy(customLayout, value, 65);
+				printf("\n Custom layout: %s", customLayout);
 
-				} else if (strcmp(param, "tabKeyAsMod4L") == 0) {
-					tabAsMod4L = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n tabKeyAsMod4L: %d", tabAsMod4L);
+			} else if (strcmp(param, "symmetricalLevel3Modifiers") == 0) {
+				quoteAsMod3R = (strcmp(value, "1") == 0);
+				printf("\n symmetricalLevel3Modifiers: %d", quoteAsMod3R);
 
-				} else if (strcmp(param, "capsLockEnabled") == 0) {
-					capsLockEnabled = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n capsLockEnabled: %d", capsLockEnabled);
+			} else if (strcmp(param, "returnKeyAsMod3R") == 0) {
+				returnAsMod3R = (strcmp(value, "1") == 0);
+				printf("\n returnKeyAsMod3R: %d", returnAsMod3R);
 
-				} else if (strcmp(param, "shiftLockEnabled") == 0) {
-					shiftLockEnabled = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n shiftLockEnabled: %d", shiftLockEnabled);
+			} else if (strcmp(param, "tabKeyAsMod4L") == 0) {
+				tabAsMod4L = (strcmp(value, "1") == 0);
+				printf("\n tabKeyAsMod4L: %d", tabAsMod4L);
 
-				} else if (strcmp(param, "level4LockEnabled") == 0) {
-					level4LockEnabled = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n level4LockEnabled: %d", level4LockEnabled);
+			} else if (strcmp(param, "capsLockEnabled") == 0) {
+				capsLockEnabled = (strcmp(value, "1") == 0);
+				printf("\n capsLockEnabled: %d", capsLockEnabled);
 
-				} else if (strcmp(param, "qwertzForShortcuts") == 0) {
-					qwertzForShortcuts = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n qwertzForShortcuts: %d", qwertzForShortcuts);
+			} else if (strcmp(param, "shiftLockEnabled") == 0) {
+				shiftLockEnabled = (strcmp(value, "1") == 0);
+				printf("\n shiftLockEnabled: %d", shiftLockEnabled);
 
-				} else if (strcmp(param, "swapLeftCtrlAndLeftAlt") == 0) {
-					swapLeftCtrlAndLeftAlt = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n swapLeftCtrlAndLeftAlt: %d", swapLeftCtrlAndLeftAlt);
+			} else if (strcmp(param, "level4LockEnabled") == 0) {
+				level4LockEnabled = (strcmp(value, "1") == 0);
+				printf("\n level4LockEnabled: %d", level4LockEnabled);
 
-				} else if (strcmp(param, "swapLeftCtrlLeftAltAndLeftWin") == 0) {
-					swapLeftCtrlLeftAltAndLeftWin = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n swapLeftCtrlLeftAltAndLeftWin: %d", swapLeftCtrlLeftAltAndLeftWin);
+			} else if (strcmp(param, "qwertzForShortcuts") == 0) {
+				qwertzForShortcuts = (strcmp(value, "1") == 0);
+				printf("\n qwertzForShortcuts: %d", qwertzForShortcuts);
 
-				} else if (strcmp(param, "supportLevels5and6") == 0) {
-					supportLevels5and6 = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n supportLevels5and6: %d", supportLevels5and6);
+			} else if (strcmp(param, "swapLeftCtrlAndLeftAlt") == 0) {
+				swapLeftCtrlAndLeftAlt = (strcmp(value, "1") == 0);
+				printf("\n swapLeftCtrlAndLeftAlt: %d", swapLeftCtrlAndLeftAlt);
 
-				} else if (strcmp(param, "capsLockAsEscape") == 0) {
-					capsLockAsEscape = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n capsLockAsEscape: %d", capsLockAsEscape);
+			} else if (strcmp(param, "swapLeftCtrlLeftAltAndLeftWin") == 0) {
+				swapLeftCtrlLeftAltAndLeftWin = (strcmp(value, "1") == 0);
+				printf("\n swapLeftCtrlLeftAltAndLeftWin: %d", swapLeftCtrlLeftAltAndLeftWin);
 
-				} else if (strcmp(param, "mod3RAsReturn") == 0) {
-					mod3RAsReturn = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n mod3RAsReturn: %d", mod3RAsReturn);
+			} else if (strcmp(param, "supportLevels5and6") == 0) {
+				supportLevels5and6 = (strcmp(value, "1") == 0);
+				printf("\n supportLevels5and6: %d", supportLevels5and6);
 
-				} else if (strcmp(param, "mod4LAsTab") == 0) {
-					mod4LAsTab = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n mod4LAsTab: %d", mod4LAsTab);
+			} else if (strcmp(param, "capsLockAsEscape") == 0) {
+				capsLockAsEscape = (strcmp(value, "1") == 0);
+				printf("\n capsLockAsEscape: %d", capsLockAsEscape);
 
-				} else {
-					printf("\nUnbekannter Parameter:%s", param);
-				}
+			} else if (strcmp(param, "mod3RAsReturn") == 0) {
+				mod3RAsReturn = (strcmp(value, "1") == 0);
+				printf("\n mod3RAsReturn: %d", mod3RAsReturn);
+
+			} else if (strcmp(param, "mod4LAsTab") == 0) {
+				mod4LAsTab = (strcmp(value, "1") == 0);
+				printf("\n mod4LAsTab: %d", mod4LAsTab);
 
 			} else {
-				printf("\ninvalid arg: %s", argv[i]);
+				printf("\nUnbekannter Parameter:%s", param);
 			}
 		}
 	}
@@ -1283,6 +1268,7 @@ int main(int argc, char *argv[]) {
 
 	// console handle: needed for coloring the output
 	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(hConsole, FG_WHITE);
 	// Catch ctrl-c because it will send keydown for ctrl
 	// but then keyup for alt. Then ctrl would be locked.
 	// Also needed for removing tray icon when quitting with ctrl-c.
