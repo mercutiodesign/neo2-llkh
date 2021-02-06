@@ -5,13 +5,13 @@
 (*Read this in [English](README.en.md)*)
 
 Dieser Treiber unterstützt folgende Tastaturlayouts:
-* [Neo2](https://www.neo-layout.org)
+* [Neo2](https://neo-layout.org)
+* [Bone](https://neo-layout.org/Layouts/bone/)
 * [Aus der Neo-Welt](http://www.adnw.de)
 * [AdNWzjßf](http://adnw.de/index.php?n=Main.AdNWzj%c3%9ff)
-* [bone](https://web.archive.org/web/20180721192908/http://wiki.neo-layout.org/wiki/Bone)
 * [KOY](http://adnw.de/index.php?n=Main.SeitlicheNachbaranschl%c3%a4ge)
 * [VOU](https://maximilian-schillinger.de/vou-layout.html) (mein persönliches Layout auf Basis von KOY)
-* [QWERTZ](https://de.wikipedia.org/wiki/QWERTZ-Tastaturbelegung)
+* [NeoQwertz](https://neo-layout.org/Layouts/neoqwertz/)
 * Andere Layouts können über eine Konfigurationsdatei definiert werden.
 
 ## Funktionsumfang

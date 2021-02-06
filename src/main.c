@@ -1,10 +1,11 @@
 #define UNICODE
 /**
  * Alternative Windows driver for the Neo2 based keyboard layouts:
- * Neo2, (https://www.neo-layout.org)
+ * Neo2 (https://neo-layout.org)
+ * Bone (https://neo-layout.org/Layouts/bone/)
  * AdNW, AdNWzjßf, KOY (www.adnw.de)
- * bone (https://web.archive.org/web/20180721192908/http://wiki.neo-layout.org/wiki/Bone)
- * qwertz (https://de.wikipedia.org/wiki/QWERTZ-Tastaturbelegung)
+ * VOU (https://maximilian-schillinger.de/vou-layout.html)
+ * NeoQwertz (https://neo-layout.org/Layouts/neoqwertz/)
  */
 
 #include <windows.h>
