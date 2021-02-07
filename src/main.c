@@ -15,6 +15,7 @@
 #include "trayicon.h"
 #include "resources.h"
 #include <io.h>
+#include <tlhelp32.h>
 
 typedef struct ModState {
 	bool shift, mod3, mod4;
@@ -139,6 +140,63 @@ typedef struct ModTap {
 #define MOD_TAP_LEN 12
 ModTap modTap[MOD_TAP_LEN];
 int modTapKeyCount = 0;  // how many ModTap keys are defined
+
+/**
+ * Periodically check processes to decide if we should be disabled
+ */
+DWORD lastProcessCheck = 0;
+bool lastBypassModeByProcess = false;
+
+bool bypassProcessRunning()
+{
+	DWORD start = GetTickCount();
+	// adapted from https://docs.microsoft.com/en-us/windows/win32/toolhelp/taking-a-snapshot-and-viewing-processes
+	// Take a snapshot of all processes in the system.
+	HANDLE handle = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (handle == INVALID_HANDLE_VALUE)
+	{
+		printf("\nError in CreateToolhelp32Snapshot (of processes)\n");
+		return false;
+	}
+
+	PROCESSENTRY32 pe32;
+	pe32.dwSize = sizeof(PROCESSENTRY32);
+	if (!Process32First(handle, &pe32))
+	{
+		printf("\nError in Process32First\n");
+		CloseHandle(handle);
+		return false;
+	}
+
+	// walk the snapshot of processes
+	printf("\nprocesses:\n");
+	bool result = false;
+	do
+	{
+		if (_wcsicmp(L"Notepad.exe", pe32.szExeFile) == 0) {
+			printf("process name: %S\n", pe32.szExeFile);
+			result = true;
+		}
+	} while (Process32Next(handle, &pe32));
+
+	CloseHandle(handle);
+
+	printf("iterated over processes in %lu ms", GetTickCount() - start);
+
+	return result;
+}
+
+bool bypassModeByProcess()
+{
+	DWORD now = GetTickCount();
+	if (lastProcessCheck == 0 || now - lastProcessCheck > 1000)
+	{
+		lastBypassModeByProcess = bypassProcessRunning();
+		lastProcessCheck = now;
+	}
+
+	return lastBypassModeByProcess;
+}
 
 bool handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp);
 void handleShiftKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp);
@@ -1272,7 +1330,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 		return -1;
 	}
 
-	if (bypassMode) {
+	if (bypassMode || bypassModeByProcess())
+	{
 		if (keyInfo.vkCode == VK_CAPITAL && !(keyInfo.flags & LLKHF_UP)) {
 			// synchronize with capsLock state during bypass
 			if (shiftLockEnabled) {
